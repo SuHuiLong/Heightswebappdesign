@@ -27,13 +27,7 @@ export function LoadingState({ message = 'AI analyzing your request...' }: Loadi
 
 function SkeletonCard() {
   return (
-    <div
-      className="w-40 h-24 rounded-lg animate-pulse"
-      style={{
-        background: 'var(--neutral-100)',
-        borderRadius: 'var(--radius-card)',
-      }}
-    />
+    <div className="h-24 w-40 animate-pulse rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[var(--surface-base)]" />
   );
 }
 
@@ -67,21 +61,16 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
       </p>
 
       <div className="w-full space-y-2 mb-4">
-        <p className="text-sm font-semibold mb-3" style={{ color: 'var(--neutral-600)' }}>
+      <p className="mb-3 text-sm font-semibold text-[color:var(--muted-foreground)]">
           TRY ASKING:
         </p>
         {suggestions.map((suggestion, idx) => (
           <button
             key={idx}
             onClick={() => onSuggestionClick?.(suggestion)}
-            className="w-full p-3 rounded-lg border text-left hover:shadow-md transition-all"
-            style={{
-              background: 'var(--card)',
-              borderColor: 'var(--border)',
-              borderRadius: 'var(--radius-control)',
-            }}
+            className="w-full rounded-[var(--radius-control)] border border-[color:var(--border)] bg-[var(--card)] p-3 text-left transition-all hover:border-[color:var(--border-strong)] hover:bg-[var(--surface-overlay)]"
           >
-            <span className="text-sm" style={{ color: 'var(--foreground)' }}>
+            <span className="text-sm text-[color:var(--foreground)]">
               "{suggestion}"
             </span>
           </button>
@@ -133,7 +122,7 @@ export function ErrorState({
             <div className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>
               Error Details
             </div>
-            <div className="text-sm" style={{ color: 'var(--neutral-700)' }}>
+            <div className="text-sm text-[color:var(--muted-foreground)]">
               Code: ERR_GATEWAY_TIMEOUT
               <br />
               Timestamp: {new Date().toLocaleString()}
@@ -209,7 +198,7 @@ export function PermissionState({
         <div className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
           Your Current Permissions:
         </div>
-        <ul className="text-sm space-y-1" style={{ color: 'var(--neutral-700)' }}>
+        <ul className="space-y-1 text-sm text-[color:var(--muted-foreground)]">
           <li>✓ View network status and metrics</li>
           <li>✓ Query subscriber information</li>
           <li>✓ Generate reports</li>
@@ -240,14 +229,7 @@ export function StreamingState() {
         <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--primary-foreground)' }} />
       </div>
       <div className="flex-1 max-w-[70%]">
-        <div
-          className="px-4 py-3 rounded-lg border"
-          style={{
-            background: 'var(--card)',
-            borderColor: 'var(--border)',
-            borderRadius: 'var(--radius-card)',
-          }}
-        >
+        <div className="rounded-[var(--radius-card)] border border-[color:var(--border)] bg-[var(--card)] px-4 py-3">
           <div className="flex gap-1.5">
             <span
               className="w-2 h-2 rounded-full animate-pulse"

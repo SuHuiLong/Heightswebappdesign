@@ -121,7 +121,7 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
       case 'all':
         return 'var(--primary)';
       case 'region':
-        return 'var(--accent)';
+        return 'var(--secondary-foreground)';
       case 'organization':
         return 'var(--success)';
       case 'subscriber':
@@ -158,32 +158,28 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
   const availableSubscribers = value.organization ? SUBSCRIBERS[value.organization] || [] : [];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       {/* Current Scope Display */}
       <motion.div
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer"
-        style={{
-          background: 'var(--card)',
-          borderColor: 'var(--border)',
-        }}
+        className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--border)] bg-[var(--card)] px-2.5 py-1"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
         <Icon className="h-4 w-4" style={{ color }} />
-        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+        <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
           {getDisplayText()}
         </span>
       </motion.div>
 
       {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         {/* All Button */}
         <motion.button
           onClick={() => onChange({ level: 'all' })}
-          className="px-2 py-1 rounded text-xs font-medium transition-all"
+          className="rounded px-2 py-0.5 text-[11px] font-medium transition-all"
           style={{
             background: value.level === 'all' ? 'var(--primary)' : 'transparent',
-            color: value.level === 'all' ? 'var(--primary-foreground)' : 'var(--neutral-500)',
+            color: value.level === 'all' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -193,14 +189,14 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
 
         {/* Region Selector */}
         <>
-            <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            <ChevronRight className="h-3 w-3 text-[color:var(--neutral-400)]" />
             <DropdownMenu open={showRegions} onOpenChange={setShowRegions}>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1"
+                  className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition-all"
                   style={{
-                    background: value.level === 'region' && !value.organization ? 'var(--accent)' : 'transparent',
-                    color: value.region ? 'var(--foreground)' : 'var(--neutral-500)',
+                    background: value.level === 'region' && !value.organization ? 'var(--accent-color)' : 'transparent',
+                    color: value.region ? 'var(--foreground)' : 'var(--muted-foreground)',
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -221,7 +217,7 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                       setShowRegions(false);
                     }}
                   >
-                    <MapPin className="h-4 w-4 mr-2" style={{ color: 'var(--accent)' }} />
+                    <MapPin className="h-4 w-4 mr-2" style={{ color: 'var(--secondary-foreground)' }} />
                     {region.name}
                   </DropdownMenuItem>
                 ))}
@@ -232,14 +228,14 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
         {/* Organization Selector */}
         {value.region && (
           <>
-            <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            <ChevronRight className="h-3 w-3 text-[color:var(--neutral-400)]" />
             <DropdownMenu open={showOrganizations} onOpenChange={setShowOrganizations}>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1"
+                  className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition-all"
                   style={{
                     background: value.level === 'organization' && !value.subscriber ? 'var(--success)' : 'transparent',
-                    color: value.organization ? 'var(--foreground)' : 'var(--neutral-500)',
+                    color: value.organization ? 'var(--foreground)' : 'var(--muted-foreground)',
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -275,14 +271,14 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
         {/* Subscriber Selector */}
         {value.organization && (
           <>
-            <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            <ChevronRight className="h-3 w-3 text-[color:var(--neutral-400)]" />
             <DropdownMenu open={showSubscribers} onOpenChange={setShowSubscribers}>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1"
+                  className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition-all"
                   style={{
                     background: value.level === 'subscriber' ? 'var(--warning)' : 'transparent',
-                    color: value.subscriber ? 'var(--foreground)' : 'var(--neutral-500)',
+                    color: value.subscriber ? 'var(--foreground)' : 'var(--muted-foreground)',
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -308,7 +304,7 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                     }}
                   >
                     <Users className="h-4 w-4 mr-2" style={{ color: 'var(--warning)' }} />
-                    {sub.name} <span className="text-xs ml-1" style={{ color: 'var(--neutral-400)' }}>({sub.id})</span>
+                    {sub.name} <span className="ml-1 text-xs text-[color:var(--neutral-400)]">({sub.id})</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

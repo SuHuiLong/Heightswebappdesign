@@ -1,30 +1,35 @@
 import { createBrowserRouter } from "react-router";
-import { CommandCenter } from "./pages/command-center";
-import { AuditTimeline } from "./pages/audit-timeline";
-import { Settings } from "./pages/settings";
-import { StatePackDemo } from "./pages/state-pack-demo";
-import { NotFound } from "./pages/not-found";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: CommandCenter,
+    lazy: async () => ({
+      Component: (await import("./pages/command-center")).CommandCenter,
+    }),
   },
   {
     path: "/audit",
-    Component: AuditTimeline,
+    lazy: async () => ({
+      Component: (await import("./pages/audit-timeline")).AuditTimeline,
+    }),
   },
   {
     path: "/settings",
-    Component: Settings,
+    lazy: async () => ({
+      Component: (await import("./pages/settings")).Settings,
+    }),
   },
   {
     path: "/demo",
-    Component: StatePackDemo,
+    lazy: async () => ({
+      Component: (await import("./pages/state-pack-demo")).StatePackDemo,
+    }),
   },
   {
     path: "*",
-    Component: NotFound,
+    lazy: async () => ({
+      Component: (await import("./pages/not-found")).NotFound,
+    }),
   },
 ], {
   basename: "/Heightswebappdesign",

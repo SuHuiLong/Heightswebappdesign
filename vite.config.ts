@@ -17,6 +17,41 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+
+          if (id.includes('recharts')) return 'charts'
+          if (id.includes('motion')) return 'motion'
+
+          if (
+            id.includes('@radix-ui') ||
+            id.includes('cmdk') ||
+            id.includes('vaul') ||
+            id.includes('input-otp') ||
+            id.includes('embla-carousel-react') ||
+            id.includes('react-day-picker')
+          ) {
+            return 'ui-vendor'
+          }
+
+          if (id.includes('react-router')) return 'router'
+
+          if (
+            id.includes('lucide-react') ||
+            id.includes('sonner') ||
+            id.includes('date-fns')
+          ) {
+            return 'app-vendor'
+          }
+
+          return 'vendor'
+        },
+      },
+    },
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

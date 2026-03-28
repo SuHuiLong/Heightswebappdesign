@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { ChevronDown, Activity, FileText, Settings as SettingsIcon, Search, Menu, X } from 'lucide-react';
 import { ThemeToggle } from '../components/theme-toggle';
 import { Button } from '../components/ui/button';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelector, ScopeSelection } from './scope-selector';
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ interface LayoutProps {
 
 export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndicator, onScopeChange }: LayoutProps) {
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({
@@ -43,102 +44,75 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
-      {/* Top Bar with glow effect */}
       {showTopBar && (
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="h-14 border-b flex items-center px-4 gap-4 relative"
+        <div
+          className="relative flex h-12 items-center gap-3 border-b px-3.5"
           style={{ 
             borderColor: 'var(--border)',
             background: 'var(--surface-base)',
           }}
         >
-          {/* Animated gradient bar */}
-          <motion.div
-            className="absolute inset-x-0 bottom-0 h-[1px]"
-            style={{
-              background: 'linear-gradient(90deg, transparent, var(--primary), transparent)',
-            }}
-            animate={{
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-
-          {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden h-9 w-9 p-0"
+            className="h-8 w-8 p-0 lg:hidden"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          <motion.div 
-            className="flex items-center gap-2 text-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
+          <div className="flex items-center gap-1.5 text-sm">
             <ScopeSelector
               value={currentScope}
               onChange={handleScopeChange}
             />
-          </motion.div>
+          </div>
 
-          {/* Global Search with focus effect */}
-          <div className="flex-1 max-w-md hidden md:block">
+          <div className="hidden max-w-sm flex-1 md:block">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors" style={{ color: 'var(--neutral-400)' }} />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors" style={{ color: 'var(--neutral-400)' }} />
               <input
                 type="text"
                 placeholder="Search subscribers, devices, events..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg border bg-transparent transition-all"
+                className="h-8 w-full rounded-lg border pl-8 pr-3 text-sm transition-all"
                 style={{
                   borderColor: 'var(--border)',
                   borderRadius: 'var(--radius-control)',
+                  background: 'var(--surface-raised)',
+                  boxShadow: 'var(--shadow-xs)',
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = 'var(--primary)';
-                  e.target.style.boxShadow = '0 0 0 1px var(--primary)';
+                  e.target.style.boxShadow = '0 0 0 4px var(--focus-ring)';
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = 'var(--border)';
-                  e.target.style.boxShadow = 'none';
+                  e.target.style.boxShadow = 'var(--shadow-xs)';
                 }}
               />
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5">
             <ThemeToggle />
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Sidebar Backdrop */}
         <AnimatePresence>
           {sidebarOpen && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              className="fixed inset-0 z-30 bg-[color:var(--overlay-scrim)] backdrop-blur-[6px] lg:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
         </AnimatePresence>
 
-        {/* Left Sidebar - Responsive width */}
         <motion.aside
           initial={false}
           animate={{ 
@@ -151,71 +125,54 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             transform transition-transform duration-300
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
-          style={{ borderColor: 'var(--border)', background: 'var(--sidebar)' }}
+          style={{ 
+            borderColor: 'var(--sidebar-border)',
+            background: 'var(--sidebar)',
+            boxShadow: 'var(--shadow-xs)',
+          }}
           onMouseEnter={() => window.innerWidth >= 1024 && window.innerWidth < 1280 && setIsCollapsed(false)}
           onMouseLeave={() => window.innerWidth >= 1024 && window.innerWidth < 1280 && setIsCollapsed(true)}
         >
-          {/* Logo/Brand with pulse effect */}
-          <div className="h-16 px-4 flex items-center border-b relative overflow-hidden" style={{ borderColor: 'var(--sidebar-border)' }}>
-            <motion.div
-              className="absolute inset-0 opacity-5"
-              style={{ background: 'var(--primary)' }}
-              animate={{
-                opacity: [0.05, 0.15, 0.05],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
+          <div className="relative flex h-12 items-center overflow-hidden border-b px-3.5" style={{ borderColor: 'var(--sidebar-border)' }}>
             <AnimatePresence mode="wait">
               {!isCollapsed ? (
-                <motion.h2
+                <h2
                   key="full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-lg font-semibold"
+                  className="text-base font-semibold tracking-tight"
                   style={{ color: 'var(--sidebar-foreground)' }}
                 >
                   Heights
-                </motion.h2>
+                </h2>
               ) : (
-                <motion.div
+                <div
                   key="short"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-lg font-bold mx-auto"
+                  className="mx-auto text-base font-semibold"
                   style={{ color: 'var(--primary)' }}
                 >
                   H
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Tenant Switcher */}
           {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-3 border-b"
+            <div
+              className="border-b p-2.5"
               style={{ borderColor: 'var(--sidebar-border)' }}
             >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-between"
+                    className="w-full justify-between text-[12px]"
                     style={{
                       background: 'var(--sidebar-accent)',
                       borderColor: 'var(--sidebar-border)',
+                      color: 'var(--sidebar-foreground)',
+                      boxShadow: 'none',
                     }}
                   >
-                    <span className="font-medium">Acme ISP</span>
+                    <span className="font-medium tracking-[0.01em]">Acme ISP</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -225,57 +182,53 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
                   <DropdownMenuItem>FastFiber Inc.</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </motion.div>
+            </div>
           )}
 
-          {/* Navigation with hover tooltips */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 space-y-1 p-2.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
                 <Link key={item.path} to={item.path}>
                   <motion.div
-                    whileHover={{ scale: 1.02, x: 4 }}
+                    whileHover={{ x: 2 }}
                     whileTap={{ scale: 0.98 }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all relative group"
+                    className="group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-all"
                     style={{
                       background: isActive ? 'var(--sidebar-primary)' : 'transparent',
                       color: isActive ? 'var(--sidebar-primary-foreground)' : 'var(--sidebar-foreground)',
                       borderRadius: 'var(--radius-control)',
+                      border: `1px solid ${isActive ? 'var(--sidebar-border)' : 'transparent'}`,
                     }}
                   >
-                    {/* Active indicator */}
                     {isActive && (
                       <motion.div
                         layoutId="sidebar-active"
                         className="absolute inset-0 rounded-lg"
                         style={{ 
                           background: 'var(--sidebar-primary)',
-                          boxShadow: '0 0 20px var(--primary)',
+                          border: '1px solid var(--sidebar-border)',
                         }}
                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       />
                     )}
                     
-                    <Icon className={`h-5 w-5 relative z-10 ${isCollapsed ? 'mx-auto' : ''}`} />
+                    <Icon className={`h-4.5 w-4.5 relative z-10 ${isCollapsed ? 'mx-auto' : ''}`} />
                     
                     <AnimatePresence mode="wait">
                       {!isCollapsed && (
-                        <motion.span
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: 'auto' }}
-                          exit={{ opacity: 0, width: 0 }}
-                          className="font-medium relative z-10"
+                        <span
+                          className="relative z-10 text-[12px] font-medium tracking-[0.01em]"
                         >
                           {item.label}
-                        </motion.span>
+                        </span>
                       )}
                     </AnimatePresence>
 
-                    {/* Tooltip for collapsed state */}
                     {isCollapsed && (
-                      <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      <div className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-lg border px-3 py-1.5 text-[12px] opacity-0 shadow-[var(--shadow-md)] transition-opacity group-hover:opacity-100"
+                        style={{ background: 'var(--surface-overlay)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
                         {item.label}
                       </div>
                     )}
@@ -285,75 +238,72 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             })}
           </nav>
 
-          {/* Quick Fleet Status with animated numbers */}
-          <div className="p-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+          <div className="border-t p-2.5" style={{ borderColor: 'var(--sidebar-border)' }}>
             <AnimatePresence mode="wait">
               {!isCollapsed ? (
-                <motion.div
+                <div
                   key="full-status"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
                 >
-                  <div className="text-xs font-semibold mb-2" style={{ color: 'var(--neutral-500)' }}>
+                  <div className="mb-1.5 text-[11px] font-semibold" style={{ color: 'var(--neutral-500)' }}>
                     FLEET STATUS
                   </div>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-1.5 text-xs">
                     <FleetStatusRow label="Online" value="12,458" color="var(--success)" />
                     <FleetStatusRow label="Degraded" value="23" color="var(--warning)" />
                     <FleetStatusRow label="Offline" value="8" color="var(--critical)" />
                   </div>
-                </motion.div>
+                </div>
               ) : (
-                <motion.div
+                <div
                   key="collapsed-status"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col gap-2"
+                  className="flex flex-col gap-1.5"
                 >
                   <StatusDot value="12,458" color="var(--success)" label="Online" />
                   <StatusDot value="23" color="var(--warning)" label="Degraded" />
                   <StatusDot value="8" color="var(--critical)" label="Offline" />
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </div>
         </motion.aside>
 
-        {/* Center Content - Flexible */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto">
+          <motion.div
+            key={location.pathname}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0.01 : 0.14, ease: 'easeOut' }}
+            className="h-full"
+          >
+            {children}
+          </motion.div>
+        </main>
 
-        {/* Right Panel - 360px (conditional, hidden on mobile) */}
         {rightPanel && (
-          <motion.aside
-            initial={{ x: 100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="w-[360px] border-l overflow-auto hidden xl:block"
+          <aside
+            className="hidden w-[320px] overflow-auto border-l xl:block"
             style={{ borderColor: 'var(--border)', background: 'var(--surface-base)' }}
           >
             {rightPanel}
-          </motion.aside>
+          </aside>
         )}
       </div>
     </div>
   );
 }
 
-// Fleet Status Row Component with animation
 function FleetStatusRow({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <motion.div
-      className="flex justify-between group cursor-pointer"
-      whileHover={{ x: 4 }}
+      className="group flex cursor-pointer justify-between"
+      whileHover={{ x: 2 }}
       transition={{ type: "spring", stiffness: 300 }}
     >
-      <span style={{ color: 'var(--sidebar-foreground)' }}>{label}</span>
+      <span className="text-xs" style={{ color: 'var(--sidebar-foreground)' }}>{label}</span>
       <motion.span
-        className="font-semibold"
+        className="text-xs font-semibold"
         style={{ color }}
-        whileHover={{ scale: 1.1 }}
+        whileHover={{ scale: 1.03 }}
       >
         {value}
       </motion.span>
@@ -361,33 +311,19 @@ function FleetStatusRow({ label, value, color }: { label: string; value: string;
   );
 }
 
-// Status Dot for collapsed view with tooltip
 function StatusDot({ value, color, label }: { value: string; color: string; label: string }) {
   return (
     <div className="relative group flex justify-center">
       <motion.div
         className="relative flex items-center justify-center"
-        whileHover={{ scale: 1.2 }}
+        whileHover={{ scale: 1.08 }}
       >
-        <motion.div
-          className="w-2 h-2 rounded-full"
-          style={{ background: color }}
-          animate={{
-            boxShadow: [
-              `0 0 0px ${color}`,
-              `0 0 8px ${color}`,
-              `0 0 0px ${color}`,
-            ],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
+        <div className="w-2 h-2 rounded-full" style={{ background: color }} />
       </motion.div>
-      {/* Tooltip */}
-      <div className="absolute left-full ml-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+      <div
+        className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs opacity-0 shadow-[var(--shadow-md)] transition-opacity group-hover:opacity-100"
+        style={{ background: 'var(--surface-overlay)', color: 'var(--foreground)', borderColor: 'var(--border)' }}
+      >
         {label}: <span className="font-semibold">{value}</span>
       </div>
     </div>

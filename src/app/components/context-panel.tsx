@@ -4,21 +4,18 @@ import { Button } from '../components/ui/button';
 export function ContextPanel() {
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
-        <h3 className="font-semibold" style={{ color: 'var(--foreground)' }}>
+      <div className="border-b border-[color:var(--border)] bg-[var(--surface-base)] px-3 py-2.5">
+        <h3 className="text-sm font-semibold tracking-tight text-[color:var(--foreground)]">
           Context & Metrics
         </h3>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {/* Live Metrics */}
+      <div className="flex-1 space-y-2.5 overflow-auto p-2.5">
         <section>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--neutral-600)' }}>
+          <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-[color:var(--neutral-500)]">
             LIVE METRICS
           </h4>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <MetricItem
               icon={<Wifi className="h-4 w-4" />}
               label="Avg WiFi Quality"
@@ -43,9 +40,8 @@ export function ContextPanel() {
           </div>
         </section>
 
-        {/* Action Progress */}
         <section>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--neutral-600)' }}>
+          <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-[color:var(--neutral-500)]">
             ACTION PROGRESS
           </h4>
           <div className="space-y-2">
@@ -64,9 +60,8 @@ export function ContextPanel() {
           </div>
         </section>
 
-        {/* Recommended Next Actions */}
         <section>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--neutral-600)' }}>
+          <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-[color:var(--neutral-500)]">
             RECOMMENDED ACTIONS
           </h4>
           <div className="space-y-2">
@@ -88,19 +83,12 @@ export function ContextPanel() {
           </div>
         </section>
 
-        {/* Recent Context */}
         <section>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--neutral-600)' }}>
+          <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-[color:var(--neutral-500)]">
             RECENT CONTEXT
           </h4>
-          <div
-            className="text-sm p-3 rounded-lg"
-            style={{
-              background: 'var(--neutral-50)',
-              borderLeft: '3px solid var(--primary)',
-            }}
-          >
-            <p style={{ color: 'var(--neutral-700)' }}>
+          <div className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-base)] p-2.5 text-xs text-[color:var(--muted-foreground)] shadow-[var(--shadow-xs)]">
+            <p>
               Last query analyzed 23 subscribers in the downtown region. 2 anomalies detected
               requiring attention.
             </p>
@@ -128,19 +116,13 @@ function MetricItem({ icon, label, value, trend, trendType }: MetricItemProps) {
       : 'var(--neutral-500)';
 
   return (
-    <div
-      className="p-3 rounded-lg border"
-      style={{
-        background: 'var(--card)',
-        borderColor: 'var(--border)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--neutral-600)' }}>
+    <div className="rounded-xl border border-[color:var(--border)] bg-[var(--card)] p-2 shadow-[var(--shadow-xs)]">
+      <div className="mb-1 flex items-center gap-1.5 text-[color:var(--neutral-600)]">
         {icon}
         <span className="text-xs">{label}</span>
       </div>
       <div className="flex items-baseline justify-between">
-        <span className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+        <span className="text-sm font-semibold text-[color:var(--foreground)]">
           {value}
         </span>
         <span className="text-xs" style={{ color: trendColor }}>
@@ -169,20 +151,14 @@ function ActionProgressItem({ action, status, device, time }: ActionProgressItem
   const StatusIcon = config.icon;
 
   return (
-    <div
-      className="p-3 rounded-lg border"
-      style={{
-        background: 'var(--card)',
-        borderColor: 'var(--border)',
-      }}
-    >
+    <div className="rounded-xl border border-[color:var(--border)] bg-[var(--card)] p-2 shadow-[var(--shadow-xs)]">
       <div className="flex items-start gap-2">
         <StatusIcon className="h-4 w-4 mt-0.5" style={{ color: config.color }} />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>
+          <div className="mb-0.5 text-xs font-medium text-[color:var(--foreground)]">
             {action}
           </div>
-          <div className="text-xs" style={{ color: 'var(--neutral-500)' }}>
+          <div className="text-xs text-[color:var(--neutral-500)]">
             {device} • {time}
           </div>
         </div>
@@ -207,23 +183,20 @@ function RecommendedAction({ title, description, severity }: RecommendedActionPr
   return (
     <Button
       variant="outline"
-      className="w-full h-auto p-3 text-left justify-start"
-      style={{
-        borderColor: 'var(--border)',
-        borderRadius: 'var(--radius-control)',
-      }}
+      className="h-auto w-full justify-start rounded-[var(--radius-control)] p-2 text-left"
+      style={{ borderColor: 'var(--border)' }}
     >
       <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="mb-1 flex items-center gap-2">
           <div
             className="w-2 h-2 rounded-full"
             style={{ background: severityColors[severity] }}
           />
-          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+          <span className="text-xs font-medium text-[color:var(--foreground)]">
             {title}
           </span>
         </div>
-        <div className="text-xs" style={{ color: 'var(--neutral-500)' }}>
+        <div className="text-xs text-[color:var(--neutral-500)]">
           {description}
         </div>
       </div>

@@ -125,6 +125,8 @@ const mockEvents: AuditEvent[] = [
 export function AuditTimeline() {
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [hoverGlowId, setHoverGlowId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
 
   const filteredEvents = mockEvents.filter((event) => {
     if (selectedSeverity !== 'all' && event.severity !== selectedSeverity) return false;
@@ -182,21 +184,21 @@ export function AuditTimeline() {
       <div className="h-full flex flex-col">
         {/* Header */}
         <div
-          className="border-b p-6"
+          className="border-b px-3 py-3 lg:px-4 lg:py-4 2xl:px-5 2xl:py-5"
           style={{ borderColor: 'var(--border)', background: 'var(--surface-base)' }}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-3 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold mb-1" style={{ color: 'var(--foreground)' }}>
+              <h1 className="mb-1 text-lg font-semibold tracking-tight text-[color:var(--foreground)] lg:text-[1.125rem]">
                 Audit Timeline
               </h1>
-              <p style={{ color: 'var(--neutral-500)' }}>
+              <p className="text-[13px] text-[color:var(--neutral-500)]">
                 Immutable event log of all system actions and operations
               </p>
             </div>
             <Button
               variant="outline"
-              style={{ borderRadius: 'var(--radius-control)' }}
+              className="rounded-[var(--radius-control)]"
             >
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -204,10 +206,10 @@ export function AuditTimeline() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" style={{ borderRadius: 'var(--radius-control)' }}>
+                <Button variant="outline" className="text-[12px]" style={{ borderRadius: 'var(--radius-control)' }}>
                   <Filter className="h-4 w-4 mr-2" />
                   Severity: {selectedSeverity === 'all' ? 'All' : selectedSeverity}
                 </Button>
@@ -234,7 +236,7 @@ export function AuditTimeline() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" style={{ borderRadius: 'var(--radius-control)' }}>
+                <Button variant="outline" className="text-[12px]" style={{ borderRadius: 'var(--radius-control)' }}>
                   <Filter className="h-4 w-4 mr-2" />
                   Status: {selectedStatus === 'all' ? 'All' : selectedStatus}
                 </Button>
@@ -259,13 +261,10 @@ export function AuditTimeline() {
         </div>
 
         {/* Timeline */}
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-6xl mx-auto">
+        <div className="flex-1 overflow-auto px-3 py-3 lg:px-4 lg:py-4 2xl:px-5 2xl:py-5">
+          <div className="workspace-shell-audit">
             {/* Column Headers */}
-            <div
-              className="grid grid-cols-12 gap-4 px-4 py-3 mb-2 text-xs font-semibold"
-              style={{ color: 'var(--neutral-500)' }}
-            >
+            <div className="mb-2 grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold tracking-[0.06em] text-[color:var(--neutral-500)]">
               <div className="col-span-2">ACTOR</div>
               <div className="col-span-2">ACTION</div>
               <div className="col-span-2">TARGET</div>
@@ -283,40 +282,59 @@ export function AuditTimeline() {
                 return (
                   <div
                     key={event.id}
-                    className="border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
+                    className="group relative cursor-pointer overflow-hidden rounded-xl border border-[color:var(--border)] bg-[var(--card)] p-3.5 transition-all hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-sm)]"
                     style={{
-                      background: 'var(--card)',
-                      borderColor: 'var(--border)',
                       borderRadius: 'var(--radius-card)',
                       borderLeft: `4px solid ${getSeverityColor(event.severity)}`,
                     }}
+                    onPointerMove={(eventRef) => {
+                      const rect = eventRef.currentTarget.getBoundingClientRect();
+                      setHoverGlowId(event.id);
+                      setHoverPosition({
+                        x: eventRef.clientX - rect.left,
+                        y: eventRef.clientY - rect.top,
+                      });
+                    }}
+                    onPointerLeave={() => setHoverGlowId(null)}
                   >
-                    <div className="grid grid-cols-12 gap-4 items-center mb-3">
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                      style={{
+                        background:
+                          hoverGlowId === event.id
+                            ? `radial-gradient(260px circle at ${hoverPosition.x}px ${hoverPosition.y}px, var(--card-glow), transparent 64%)`
+                            : 'none',
+                      }}
+                    />
+                    <div className="relative z-10">
+                    <div className="mb-2.5 grid grid-cols-12 items-center gap-3">
                       {/* Actor */}
                       <div className="col-span-2 flex items-center gap-2">
                         <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
                           style={{
                             background:
                               event.actorType === 'ai'
-                                ? 'var(--primary)'
+                                ? 'var(--accent-color)'
                                 : event.actorType === 'system'
-                                ? 'var(--neutral-300)'
-                                : 'var(--accent-color)',
+                                ? 'var(--surface-base)'
+                                : 'var(--secondary)',
                           }}
                         >
                           <ActorIcon
                             className="h-4 w-4"
                             style={{
                               color:
-                                event.actorType === 'ai' || event.actorType === 'user'
-                                  ? '#ffffff'
-                                  : 'var(--neutral-700)',
+                                event.actorType === 'ai'
+                                  ? 'var(--primary)'
+                                  : event.actorType === 'user'
+                                  ? 'var(--foreground)'
+                                  : 'var(--muted-foreground)',
                             }}
                           />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+                          <div className="text-[13px] font-medium truncate" style={{ color: 'var(--foreground)' }}>
                             {event.actor}
                           </div>
                           <div className="text-xs" style={{ color: 'var(--neutral-500)' }}>
@@ -327,7 +345,7 @@ export function AuditTimeline() {
 
                       {/* Action */}
                       <div className="col-span-2">
-                        <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                        <div className="text-[13px] font-medium" style={{ color: 'var(--foreground)' }}>
                           {event.action}
                         </div>
                       </div>
@@ -336,7 +354,7 @@ export function AuditTimeline() {
                       <div className="col-span-2">
                         <div className="flex items-center gap-2">
                           <Target className="h-4 w-4" style={{ color: 'var(--neutral-400)' }} />
-                          <span className="text-sm" style={{ color: 'var(--foreground)' }}>
+                          <span className="text-[13px]" style={{ color: 'var(--foreground)' }}>
                             {event.target}
                           </span>
                         </div>
@@ -344,7 +362,7 @@ export function AuditTimeline() {
 
                       {/* Time */}
                       <div className="col-span-2">
-                        <div className="text-sm" style={{ color: 'var(--neutral-600)' }}>
+                        <div className="text-[13px]" style={{ color: 'var(--neutral-600)' }}>
                           {event.time}
                         </div>
                       </div>
@@ -354,7 +372,7 @@ export function AuditTimeline() {
                         <div className="flex items-center gap-2">
                           <StatusIcon className="h-4 w-4" style={{ color: getStatusColor(event.status) }} />
                           <span
-                            className="text-sm font-medium"
+                            className="text-[13px] font-medium"
                             style={{ color: getStatusColor(event.status) }}
                           >
                             {event.status}
@@ -364,13 +382,7 @@ export function AuditTimeline() {
 
                       {/* Correlation ID */}
                       <div className="col-span-2">
-                        <code
-                          className="text-xs px-2 py-1 rounded"
-                          style={{
-                            background: 'var(--neutral-100)',
-                            color: 'var(--neutral-700)',
-                          }}
-                        >
+                        <code className="rounded border border-[color:var(--border-subtle)] bg-[var(--surface-base)] px-2 py-1 text-xs text-[color:var(--foreground)]">
                           {event.correlationId}
                         </code>
                       </div>
@@ -378,10 +390,11 @@ export function AuditTimeline() {
 
                     {/* Details */}
                     <div
-                      className="text-sm pl-10"
+                      className="pl-10 text-[13px]"
                       style={{ color: 'var(--neutral-600)' }}
                     >
                       {event.details}
+                    </div>
                     </div>
                   </div>
                 );
@@ -389,8 +402,8 @@ export function AuditTimeline() {
             </div>
 
             {filteredEvents.length === 0 && (
-              <div className="text-center py-12">
-                <p style={{ color: 'var(--neutral-500)' }}>
+              <div className="py-12 text-center">
+                <p className="text-[color:var(--neutral-500)]">
                   No events found matching the selected filters.
                 </p>
               </div>

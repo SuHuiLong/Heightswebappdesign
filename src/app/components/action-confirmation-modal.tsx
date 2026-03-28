@@ -45,7 +45,7 @@ export function ActionConfirmationModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-[color:var(--overlay-scrim)]"
             onClick={onClose}
             style={{ backdropFilter: 'blur(4px)' }}
           />
@@ -56,17 +56,10 @@ export function ActionConfirmationModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-lg mx-4 rounded-lg shadow-xl"
-            style={{
-              background: 'var(--card)',
-              borderRadius: 'var(--radius-card)',
-            }}
+            className="relative mx-4 w-full max-w-lg rounded-[var(--radius-card)] border border-[color:var(--border)] bg-[var(--card)] shadow-[var(--shadow-md)]"
           >
             {/* Header */}
-            <div
-              className="flex items-center justify-between p-6 border-b"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            <div className="flex items-center justify-between border-b border-[color:var(--border)] p-6">
               <div className="flex items-center gap-3">
                 {isHighRisk && (
                   <div
@@ -99,22 +92,21 @@ export function ActionConfirmationModal({
             {/* Content */}
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-sm font-semibold mb-2 block" style={{ color: 'var(--neutral-600)' }}>
+                <label className="mb-2 block text-sm font-semibold text-[color:var(--muted-foreground)]">
                   DESCRIPTION
                 </label>
-                <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                <p className="text-sm text-[color:var(--foreground)]">
                   {action.description}
                 </p>
               </div>
 
               <div>
-                <label className="text-sm font-semibold mb-2 block" style={{ color: 'var(--neutral-600)' }}>
+                <label className="mb-2 block text-sm font-semibold text-[color:var(--muted-foreground)]">
                   SCOPE
                 </label>
                 <div
-                  className="p-3 rounded-lg text-sm"
+                  className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-base)] p-3 text-sm"
                   style={{
-                    background: 'var(--neutral-50)',
                     color: 'var(--foreground)',
                   }}
                 >
@@ -123,10 +115,10 @@ export function ActionConfirmationModal({
               </div>
 
               <div>
-                <label className="text-sm font-semibold mb-2 block" style={{ color: 'var(--neutral-600)' }}>
+                <label className="mb-2 block text-sm font-semibold text-[color:var(--muted-foreground)]">
                   EXPECTED IMPACT
                 </label>
-                <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                <p className="text-sm text-[color:var(--foreground)]">
                   {action.expectedImpact}
                 </p>
               </div>
@@ -142,7 +134,7 @@ export function ActionConfirmationModal({
                   <div className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>
                     Rollback Information
                   </div>
-                  <p className="text-sm" style={{ color: 'var(--neutral-600)' }}>
+                  <p className="text-sm text-[color:var(--muted-foreground)]">
                     {action.rollbackHint}
                   </p>
                 </div>
@@ -156,8 +148,7 @@ export function ActionConfirmationModal({
                 />
                 <label
                   htmlFor="confirm-action"
-                  className="text-sm cursor-pointer"
-                  style={{ color: 'var(--foreground)' }}
+                  className="cursor-pointer text-sm text-[color:var(--foreground)]"
                 >
                   I understand the impact and confirm this action
                 </label>
@@ -165,10 +156,7 @@ export function ActionConfirmationModal({
             </div>
 
             {/* Footer */}
-            <div
-              className="flex justify-end gap-3 p-6 border-t"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            <div className="flex justify-end gap-3 border-t border-[color:var(--border)] p-6">
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>

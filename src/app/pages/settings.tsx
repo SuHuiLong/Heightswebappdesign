@@ -7,15 +7,15 @@ export function Settings() {
   return (
     <AppLayout showTopBar={false}>
       <div className="h-full overflow-auto">
-        <div className="max-w-4xl mx-auto p-6">
-          <h1 className="text-2xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+        <div className="workspace-shell-settings px-3 py-3 lg:px-4 lg:py-4 2xl:px-5 2xl:py-5">
+          <h1 className="mb-2 text-lg font-semibold tracking-tight text-[color:var(--foreground)] lg:text-[1.125rem]">
             Settings
           </h1>
-          <p className="mb-8" style={{ color: 'var(--neutral-500)' }}>
+          <p className="mb-5 text-[13px] text-[color:var(--neutral-500)]">
             Configure your Heights AI operations center
           </p>
 
-          <div className="space-y-6">
+          <div className="space-y-3 lg:space-y-4">
             {/* Notifications */}
             <SettingsSection
               icon={<Bell className="h-5 w-5" />}
@@ -113,8 +113,7 @@ export function Settings() {
                 />
                 <Button
                   variant="outline"
-                  className="w-full mt-4"
-                  style={{ borderRadius: 'var(--radius-control)' }}
+                  className="mt-4 w-full rounded-[var(--radius-control)]"
                 >
                   Invite Team Member
                 </Button>
@@ -132,11 +131,7 @@ export function Settings() {
                 description="Choose between light and dark mode"
                 control={
                   <select
-                    className="px-3 py-2 rounded-lg border bg-transparent"
-                    style={{
-                      borderColor: 'var(--border)',
-                      color: 'var(--foreground)',
-                    }}
+                    className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-[12px] text-[color:var(--foreground)] shadow-[var(--shadow-xs)]"
                   >
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
@@ -149,11 +144,7 @@ export function Settings() {
                 description="Adjust the amount of information displayed"
                 control={
                   <select
-                    className="px-3 py-2 rounded-lg border bg-transparent"
-                    style={{
-                      borderColor: 'var(--border)',
-                      color: 'var(--foreground)',
-                    }}
+                    className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-[12px] text-[color:var(--foreground)] shadow-[var(--shadow-xs)]"
                   >
                     <option value="comfortable">Comfortable</option>
                     <option value="compact">Compact</option>
@@ -177,31 +168,23 @@ interface SettingsSectionProps {
 
 function SettingsSection({ icon, title, description, children }: SettingsSectionProps) {
   return (
-    <div
-      className="border rounded-lg p-6"
-      style={{
-        background: 'var(--card)',
-        borderColor: 'var(--border)',
-        borderRadius: 'var(--radius-card)',
-      }}
-    >
-      <div className="flex items-start gap-3 mb-6">
+    <div className="rounded-[var(--radius-card)] border border-[color:var(--border)] bg-[var(--card)] p-4 lg:p-5 shadow-[var(--shadow-xs)]">
+      <div className="mb-3 flex items-start gap-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
-          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-subtle)] bg-[var(--accent-color)] text-[color:var(--primary)]"
         >
           {icon}
         </div>
         <div>
-          <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>
+          <h3 className="mb-1 text-[13px] font-semibold text-[color:var(--foreground)]">
             {title}
           </h3>
-          <p className="text-sm" style={{ color: 'var(--neutral-500)' }}>
+          <p className="text-[12px] text-[color:var(--neutral-500)]">
             {description}
           </p>
         </div>
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-2.5 lg:space-y-3">{children}</div>
     </div>
   );
 }
@@ -214,12 +197,12 @@ interface SettingItemProps {
 
 function SettingItem({ label, description, control }: SettingItemProps) {
   return (
-    <div className="flex items-center justify-between py-3">
+    <div className="flex items-center justify-between py-2">
       <div className="flex-1">
-        <div className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>
+        <div className="mb-1 text-[13px] font-medium text-[color:var(--foreground)]">
           {label}
         </div>
-        <div className="text-sm" style={{ color: 'var(--neutral-500)' }}>
+        <div className="text-[12px] text-[color:var(--neutral-500)]">
           {description}
         </div>
       </div>
@@ -236,36 +219,23 @@ interface TeamMemberProps {
 
 function TeamMember({ name, email, role }: TeamMemberProps) {
   return (
-    <div
-      className="flex items-center justify-between p-3 rounded-lg"
-      style={{
-        background: 'var(--neutral-50)',
-        border: '1px solid var(--border)',
-      }}
-    >
+    <div className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-[var(--surface-base)] p-3 shadow-[var(--shadow-xs)]">
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ background: 'var(--primary)' }}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-color)]"
         >
-          <Lock className="h-5 w-5" style={{ color: 'var(--primary-foreground)' }} />
+          <Lock className="h-5 w-5 text-[color:var(--primary)]" />
         </div>
         <div>
-          <div className="font-medium" style={{ color: 'var(--foreground)' }}>
+          <div className="text-[13px] font-medium text-[color:var(--foreground)]">
             {name}
           </div>
-          <div className="text-sm" style={{ color: 'var(--neutral-500)' }}>
+          <div className="text-[12px] text-[color:var(--neutral-500)]">
             {email}
           </div>
         </div>
       </div>
-      <div
-        className="px-3 py-1 rounded text-sm font-medium"
-        style={{
-          background: 'var(--primary)',
-          color: 'var(--primary-foreground)',
-        }}
-      >
+      <div className="rounded border border-[color:var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1 text-[12px] font-medium text-[color:var(--foreground)]">
         {role}
       </div>
     </div>

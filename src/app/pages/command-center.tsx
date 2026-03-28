@@ -1,9 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import { Check, Send, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { AppLayout } from '../components/app-layout';
 import { ContextPanel } from '../components/context-panel';
 import { ScopeSelection } from '../components/scope-selector';
+import {
+  REGIONS,
+  REGION_LABELS,
+  ORGANIZATION_LABELS,
+  SUBSCRIBER_LABELS,
+  DEFAULT_SUBSCRIBER_ID,
+  DEFAULT_SUBSCRIBER_NAME,
+  buildScopeSelection,
+  getDevicesForSubscriber,
+  getOrganizationsForRegion,
+  getSubscribersForOrganization,
+  getParentScopeForDevice,
+  normalizeScopeSearchValue,
+} from '../lib/scope-data';
 import {
   UserMessage,
   AITextMessage,
@@ -52,50 +66,213 @@ interface ScopeQuickAction extends ScopeActionOption {
   openInspectDrawer?: boolean;
 }
 
-const REGION_LABELS: Record<string, string> = {
-  north: 'North Region',
-  south: 'South Region',
-  east: 'East Region',
-  west: 'West Region',
-  central: 'Central Region',
-};
+type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
+type ScopePaletteStep = 'root' | 'region' | 'organization' | 'subscriber' | 'device';
 
-const ORGANIZATION_LABELS: Record<string, string> = {
-  'acme-isp': 'Acme ISP',
-  technet: 'TechNet Co.',
-  fastfiber: 'FastFiber Inc.',
-  netpro: 'NetPro Services',
-  eastlink: 'EastLink Networks',
-  cityconnect: 'CityConnect',
-  westcom: 'WestCom ISP',
-  skywave: 'SkyWave Internet',
-  centralnet: 'CentralNet',
-  corefiber: 'CoreFiber LLC',
-};
+interface ScopeCommandOption {
+  id: string;
+  label: string;
+  description: string;
+  commandLabel?: string;
+  nextState?: ScopePaletteState;
+  scope?: ScopeSelection;
+}
 
-const SUBSCRIBER_LABELS: Record<string, string> = {
-  'SUB-7834': 'John Smith',
-  'SUB-7835': 'Sarah Johnson',
-  'SUB-7836': 'Michael Chen',
-  'SUB-8901': 'Emily Davis',
-  'SUB-8902': 'David Wilson',
-  'SUB-4521': 'Robert Brown',
-  'SUB-4522': 'Jennifer Taylor',
-  'SUB-3344': 'William Anderson',
-  'SUB-3345': 'Lisa Martinez',
-  'SUB-5567': 'James Garcia',
-  'SUB-5568': 'Mary Rodriguez',
-  'SUB-6678': 'Thomas Lee',
-  'SUB-6679': 'Patricia White',
-  'SUB-7789': 'Christopher Harris',
-  'SUB-7790': 'Barbara Clark',
-  'SUB-8890': 'Daniel Lewis',
-  'SUB-8891': 'Elizabeth Walker',
-  'SUB-9901': 'Matthew Hall',
-  'SUB-9902': 'Susan Allen',
-  'SUB-1012': 'Joseph Young',
-  'SUB-1013': 'Jessica King',
-};
+interface ScopePaletteState {
+  targetLevel: ScopeCommandName | null;
+  step: ScopePaletteStep;
+  region?: string;
+  organization?: string;
+  subscriber?: string;
+}
+
+function matchesScopeQuery(query: string, ...values: Array<string | undefined>) {
+  if (!query) return true;
+
+  const normalizedQuery = normalizeScopeSearchValue(query);
+  return values.some((value) => normalizeScopeSearchValue(value ?? '').includes(normalizedQuery));
+}
+
+function getRootScopeCommandOptions(): ScopeCommandOption[] {
+  return [
+    {
+      id: 'scope-all',
+      label: 'All Tenants',
+      description: 'Reset to the global fleet scope.',
+      commandLabel: '/all',
+      scope: { level: 'all' },
+    },
+    {
+      id: 'target-region',
+      label: 'Region',
+      description: 'Choose a region scope.',
+      nextState: { targetLevel: 'region', step: 'region' },
+    },
+    {
+      id: 'target-organization',
+      label: 'Organization',
+      description: 'Choose region, then organization.',
+      nextState: { targetLevel: 'organization', step: 'region' },
+    },
+    {
+      id: 'target-subscriber',
+      label: 'Subscriber',
+      description: 'Choose region, organization, then subscriber.',
+      nextState: { targetLevel: 'subscriber', step: 'region' },
+    },
+    {
+      id: 'target-device',
+      label: 'Device',
+      description: 'Choose region, organization, subscriber, then gateway device.',
+      nextState: { targetLevel: 'device', step: 'region' },
+    },
+  ];
+}
+
+function getScopePalettePlaceholder(state: ScopePaletteState) {
+  switch (state.step) {
+    case 'root':
+      return 'Choose All, Region, Organization, Subscriber, or Device';
+    case 'region':
+      return 'Filter regions';
+    case 'organization':
+      return 'Filter organizations in the selected region';
+    case 'subscriber':
+      return 'Filter subscribers in the selected organization';
+    case 'device':
+      return 'Filter gateway devices for the selected subscriber';
+  }
+}
+
+function getScopePaletteContextLabel(state: ScopePaletteState) {
+  const parts: string[] = [];
+
+  if (state.region) {
+    parts.push(REGION_LABELS[state.region] ?? state.region);
+  }
+  if (state.organization) {
+    parts.push(ORGANIZATION_LABELS[state.organization] ?? state.organization);
+  }
+  if (state.subscriber) {
+    const subscriberName = SUBSCRIBER_LABELS[state.subscriber];
+    parts.push(subscriberName ? `${subscriberName} (${state.subscriber})` : state.subscriber);
+  }
+
+  return parts.join(' > ');
+}
+
+function getScopeCommandOptions(
+  state: ScopePaletteState,
+  query: string,
+): ScopeCommandOption[] {
+  switch (state.step) {
+    case 'root':
+      return getRootScopeCommandOptions().filter((option) =>
+        matchesScopeQuery(query, option.label, option.description, option.commandLabel),
+      );
+    case 'region':
+      return REGIONS.filter((region) => matchesScopeQuery(query, region.id, region.name)).map((region) => ({
+        id: `region-${region.id}`,
+        label: region.name,
+        description:
+          state.targetLevel === 'region'
+            ? `Switch scope to ${region.name}.`
+            : `Choose ${region.name} and continue.`,
+        commandLabel: `/region ${region.id}`,
+        scope: state.targetLevel === 'region' ? buildScopeSelection('region', region.id) : undefined,
+        nextState:
+          state.targetLevel === 'region'
+            ? undefined
+            : {
+                ...state,
+                step: 'organization',
+                region: region.id,
+                organization: undefined,
+                subscriber: undefined,
+              },
+      }));
+    case 'organization':
+      return getOrganizationsForRegion(state.region)
+        .filter((organization) => matchesScopeQuery(query, organization.id, organization.name))
+        .map((organization) => ({
+          id: `organization-${organization.id}`,
+          label: organization.name,
+          description:
+            state.targetLevel === 'organization'
+              ? `Switch to organization ${organization.name}.`
+              : `Choose ${organization.name} and continue.`,
+          commandLabel: `/organization ${organization.id}`,
+          scope:
+            state.targetLevel === 'organization'
+              ? buildScopeSelection('organization', organization.id)
+              : undefined,
+          nextState:
+            state.targetLevel === 'organization'
+              ? undefined
+              : {
+                  ...state,
+                  step: 'subscriber',
+                  organization: organization.id,
+                  subscriber: undefined,
+                },
+        }));
+    case 'subscriber':
+      return getSubscribersForOrganization(state.organization)
+        .filter((subscriber) => matchesScopeQuery(query, subscriber.id, subscriber.name))
+        .map((subscriber) => ({
+          id: `subscriber-${subscriber.id}`,
+          label: `${subscriber.name} (${subscriber.id})`,
+          description:
+            state.targetLevel === 'subscriber'
+              ? `Switch to subscriber ${subscriber.name}.`
+              : `Choose ${subscriber.name} and continue.`,
+          commandLabel: `/subscriber ${subscriber.id}`,
+          scope:
+            state.targetLevel === 'subscriber'
+              ? buildScopeSelection('subscriber', subscriber.id)
+              : undefined,
+          nextState:
+            state.targetLevel === 'subscriber'
+              ? undefined
+              : {
+                  ...state,
+                  step: 'device',
+                  subscriber: subscriber.id,
+                },
+        }));
+    case 'device':
+      return getDevicesForSubscriber(state.subscriber)
+        .filter((device) => matchesScopeQuery(query, device.id, device.name))
+        .map((device) => {
+          const parentScope = getParentScopeForDevice(device.id);
+          const subscriberName = SUBSCRIBER_LABELS[parentScope.subscriber ?? ''] ?? DEFAULT_SUBSCRIBER_NAME;
+          return {
+            id: `device-${device.id}`,
+            label: `${device.name} Gateway`,
+            description: `${subscriberName} (${parentScope.subscriber})`,
+            commandLabel: `/device ${device.id}`,
+            scope: buildScopeSelection('device', device.id),
+          };
+        });
+  }
+}
+
+function getScopedGatewayContext(scope: ScopeSelection) {
+  const subscriberId = scope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
+  const subscriberName = SUBSCRIBER_LABELS[subscriberId] ?? DEFAULT_SUBSCRIBER_NAME;
+  const scopedDevices = getDevicesForSubscriber(subscriberId);
+  const fallbackDevice = scopedDevices[0] ?? { id: 'GW-7834-HOME', name: 'Home' };
+  const selectedDevice =
+    scopedDevices.find((device) => device.id === scope.device) ?? fallbackDevice;
+
+  return {
+    subscriberId,
+    subscriberName,
+    deviceId: selectedDevice.id,
+    deviceName: selectedDevice.name,
+    gatewayName: `${selectedDevice.name} Gateway`,
+  };
+}
 
 const getTimestamp = () =>
   new Date().toLocaleTimeString('en-US', {
@@ -117,6 +294,10 @@ function getScopeDisplayLabel(scope: ScopeSelection) {
         return `${subscriberName} (${scope.subscriber})`;
       }
       return 'this subscriber';
+    }
+    case 'device': {
+      const { subscriberId, subscriberName, gatewayName } = getScopedGatewayContext(scope);
+      return `${subscriberName} (${subscriberId}) • ${gatewayName}`;
     }
     default:
       return 'the current scope';
@@ -143,7 +324,12 @@ function getScopeAssistantCopy(scope: ScopeSelection) {
     case 'subscriber':
       return {
         title: 'Subscriber Assistant',
-        description: `Diagnostic shortcuts for ${getScopeDisplayLabel(scope)} including topology, speed, plan, and quick inspection.`,
+        description: `Gateway inventory shortcuts for ${getScopeDisplayLabel(scope)}. Select a gateway device to run diagnostics and actions.`,
+      };
+    case 'device':
+      return {
+        title: 'Gateway Assistant',
+        description: `Device-level diagnostics and remediation shortcuts for ${getScopeDisplayLabel(scope)}.`,
       };
     default:
       return {
@@ -162,7 +348,9 @@ function getScopedDeviceTableTitle(scope: ScopeSelection) {
     case 'organization':
       return `${getScopeDisplayLabel(scope)} Device Inventory`;
     case 'subscriber':
-      return `${getScopeDisplayLabel(scope)} Devices`;
+      return `${getScopeDisplayLabel(scope)} Gateway Devices`;
+    case 'device':
+      return `${getScopeDisplayLabel(scope)} Connected Clients`;
     default:
       return 'Device Inventory';
   }
@@ -178,6 +366,8 @@ function getScopedBandwidthTitle(scope: ScopeSelection) {
       return `Bandwidth Usage - ${getScopeDisplayLabel(scope)}`;
     case 'subscriber':
       return `Bandwidth Usage - ${getScopeDisplayLabel(scope)}`;
+    case 'device':
+      return `Gateway Bandwidth - ${getScopeDisplayLabel(scope)}`;
     default:
       return 'Bandwidth Usage';
   }
@@ -192,14 +382,20 @@ function getScopedServicePlanTitle(scope: ScopeSelection) {
     case 'organization':
       return `Service Plans - ${getScopeDisplayLabel(scope)}`;
     case 'subscriber':
-      return `Current Plan - ${getScopeDisplayLabel(scope)}`;
+      return `Service Plan - ${getScopeDisplayLabel(scope)}`;
+    case 'device':
+      return `Gateway Service Plan - ${getScopeDisplayLabel(scope)}`;
     default:
       return 'Service Plan';
   }
 }
 
 function getScopedTopologyName(scope: ScopeSelection) {
-  return scope.level === 'subscriber' ? getScopeDisplayLabel(scope) : 'John Smith';
+  if (scope.level === 'device') {
+    return getScopeDisplayLabel(scope);
+  }
+
+  return scope.level === 'subscriber' ? getScopeDisplayLabel(scope) : DEFAULT_SUBSCRIBER_NAME;
 }
 
 function getScopedSpeedTestTitle(scope: ScopeSelection) {
@@ -211,7 +407,9 @@ function getScopedSpeedTestTitle(scope: ScopeSelection) {
     case 'organization':
       return `Speed Test - ${getScopeDisplayLabel(scope)}`;
     case 'subscriber':
-      return `Speed Test - ${getScopeDisplayLabel(scope)}`;
+      return `Subscriber Speed Test - ${getScopeDisplayLabel(scope)}`;
+    case 'device':
+      return `Gateway Speed Test - ${getScopeDisplayLabel(scope)}`;
     default:
       return 'Speed Test';
   }
@@ -226,7 +424,9 @@ function getScopedOutageTitle(scope: ScopeSelection) {
     case 'organization':
       return `Incidents - ${getScopeDisplayLabel(scope)}`;
     case 'subscriber':
-      return `Service Incidents - ${getScopeDisplayLabel(scope)}`;
+      return `Subscriber Incidents - ${getScopeDisplayLabel(scope)}`;
+    case 'device':
+      return `Gateway Incidents - ${getScopeDisplayLabel(scope)}`;
     default:
       return 'Active Outages';
   }
@@ -241,7 +441,9 @@ function getScopedMetricTitle(scope: ScopeSelection) {
     case 'organization':
       return `${getScopeDisplayLabel(scope)} Health Score`;
     case 'subscriber':
-      return `${getScopeDisplayLabel(scope)} Health Score`;
+      return `${getScopeDisplayLabel(scope)} Subscriber Health`;
+    case 'device':
+      return `${getScopeDisplayLabel(scope)} Gateway Health`;
     default:
       return 'Average Network Quality';
   }
@@ -256,6 +458,8 @@ function getScopedMetricChange(scope: ScopeSelection) {
     case 'organization':
       return '+1.1% vs last report';
     case 'subscriber':
+      return '+2.1% after gateway rebalance';
+    case 'device':
       return '+4.2% after remediation';
     default:
       return '+2.3% vs yesterday';
@@ -286,6 +490,12 @@ function getScopedAlerts(scope: ScopeSelection) {
       ];
     case 'subscriber':
       return [
+        { id: '1', severity: 'critical' as const, message: `${label} has 1 degraded gateway device`, count: 1 },
+        { id: '2', severity: 'medium' as const, message: `Gateway latency is elevated across 2 subscriber devices`, count: 2 },
+        { id: '3', severity: 'low' as const, message: `Gateway optimization recommendations available`, count: 2 },
+      ];
+    case 'device':
+      return [
         { id: '1', severity: 'critical' as const, message: `${label} experienced a gateway disconnect`, count: 1 },
         { id: '2', severity: 'medium' as const, message: `Packet loss is elevated for ${label}`, count: 3 },
         { id: '3', severity: 'low' as const, message: `Wi-Fi optimization recommendations available`, count: 2 },
@@ -296,11 +506,22 @@ function getScopedAlerts(scope: ScopeSelection) {
 }
 
 function getScopedSubscriberCard(scope: ScopeSelection) {
+  if (scope.level === 'device') {
+    const gatewayContext = getScopedGatewayContext(scope);
+    return {
+      subscriberId: gatewayContext.deviceId,
+      name: gatewayContext.gatewayName,
+      source: 'Gateway Diagnostics',
+      devices: 18,
+    };
+  }
+
   if (scope.level === 'subscriber') {
     return {
-      subscriberId: scope.subscriber ?? 'SUB-7834',
-      name: SUBSCRIBER_LABELS[scope.subscriber ?? 'SUB-7834'] ?? 'John Smith',
+      subscriberId: scope.subscriber ?? DEFAULT_SUBSCRIBER_ID,
+      name: SUBSCRIBER_LABELS[scope.subscriber ?? DEFAULT_SUBSCRIBER_ID] ?? DEFAULT_SUBSCRIBER_NAME,
       source: 'Subscriber Diagnostics',
+      devices: getDevicesForSubscriber(scope.subscriber).length || 1,
     };
   }
 
@@ -309,6 +530,7 @@ function getScopedSubscriberCard(scope: ScopeSelection) {
       subscriberId: 'ORG-PRIMARY',
       name: `${getScopeDisplayLabel(scope)} Priority Subscriber`,
       source: 'Organization Health Monitor',
+      devices: 8,
     };
   }
 
@@ -317,13 +539,15 @@ function getScopedSubscriberCard(scope: ScopeSelection) {
       subscriberId: 'REG-IMPACT-1',
       name: `${getScopeDisplayLabel(scope)} Impacted Subscriber`,
       source: 'Regional Subscriber Monitor',
+      devices: 6,
     };
   }
 
   return {
-    subscriberId: 'SUB-7834',
-    name: 'John Smith',
+    subscriberId: DEFAULT_SUBSCRIBER_ID,
+    name: DEFAULT_SUBSCRIBER_NAME,
     source: 'Subscriber Database',
+    devices: getDevicesForSubscriber(DEFAULT_SUBSCRIBER_ID).length || 1,
   };
 }
 
@@ -349,9 +573,15 @@ function getScopedActionCard(scope: ScopeSelection) {
       };
     case 'subscriber':
       return {
-        title: `Restart subscriber gateway for ${getScopeDisplayLabel(scope)}`,
-        description: 'This will briefly interrupt service while the subscriber gateway restarts.',
-        source: 'Subscriber Remediation Engine',
+        title: `Review gateway inventory for ${getScopeDisplayLabel(scope)}`,
+        description: 'Inspect gateway devices under this subscriber and choose one for remediation.',
+        source: 'Subscriber Gateway Inventory',
+      };
+    case 'device':
+      return {
+        title: `Restart gateway for ${getScopeDisplayLabel(scope)}`,
+        description: 'This will briefly interrupt service while the selected gateway restarts.',
+        source: 'Gateway Remediation Engine',
       };
     default:
       return {
@@ -398,14 +628,26 @@ function getScopedReceipt(scope: ScopeSelection) {
       };
     case 'subscriber':
       return {
-        action: `Subscriber Remediation Completed`,
+        action: `Subscriber Gateway Review Completed`,
         details: [
           { label: 'Subscriber', value: label },
-          { label: 'Duration', value: '45 seconds' },
-          { label: 'Device', value: 'GW-4521-A' },
+          { label: 'Gateways Reviewed', value: `${getDevicesForSubscriber(scope.subscriber).length || 1}` },
+          { label: 'Next Step', value: 'Select gateway device' },
         ],
-        source: 'Subscriber Remediation Engine',
+        source: 'Subscriber Gateway Inventory',
       };
+    case 'device': {
+      const gatewayContext = getScopedGatewayContext(scope);
+      return {
+        action: `Gateway Remediation Completed`,
+        details: [
+          { label: 'Gateway', value: gatewayContext.gatewayName },
+          { label: 'Duration', value: '45 seconds' },
+          { label: 'Device ID', value: gatewayContext.deviceId },
+        ],
+        source: 'Gateway Remediation Engine',
+      };
+    }
     default:
       return {
         action: 'Action Completed',
@@ -444,8 +686,15 @@ function getScopedWorkOrder(scope: ScopeSelection) {
       return {
         title: `Subscriber Work Order - ${label}`,
         ticketId: 'WO-51773',
-        category: 'Subscriber Remediation',
+        category: 'Subscriber Gateway Review',
         assignedTo: 'Mike Chen',
+      };
+    case 'device':
+      return {
+        title: `Gateway Work Order - ${label}`,
+        ticketId: 'WO-62451',
+        category: 'Gateway Remediation',
+        assignedTo: 'Nina Patel',
       };
     default:
       return {
@@ -467,6 +716,8 @@ function getScopedSLATitle(scope: ScopeSelection) {
       return `${getScopeDisplayLabel(scope)} SLA Compliance`;
     case 'subscriber':
       return `${getScopeDisplayLabel(scope)} Service Compliance`;
+    case 'device':
+      return `${getScopeDisplayLabel(scope)} Gateway Compliance`;
     default:
       return 'SLA Compliance';
   }
@@ -494,8 +745,15 @@ function getScopedProvisioning(scope: ScopeSelection) {
     case 'subscriber':
       return {
         title: `Provisioning - ${label}`,
-        accountId: scope.subscriber ?? 'SUB-7834',
+        accountId: scope.subscriber ?? DEFAULT_SUBSCRIBER_ID,
       };
+    case 'device': {
+      const gatewayContext = getScopedGatewayContext(scope);
+      return {
+        title: `Provisioning - ${label}`,
+        accountId: gatewayContext.deviceId,
+      };
+    }
     default:
       return {
         title: 'Provisioning',
@@ -532,9 +790,17 @@ function getScopedActionModal(scope: ScopeSelection) {
       };
     case 'subscriber':
       return {
+        title: `Review Gateway Devices - ${getScopeDisplayLabel(scope)}`,
+        description: 'This action opens a guided gateway review workflow for the selected subscriber.',
+        scope: `Subscriber Gateway Inventory • ${getScopeDisplayLabel(scope)}`,
+        expectedImpact: 'No immediate service interruption. Use this to choose the exact gateway device to operate on.',
+        rollbackHint: 'Exit the workflow if you need to switch to a different gateway device.',
+      };
+    case 'device':
+      return {
         title: `Restart Gateway - ${getScopeDisplayLabel(scope)}`,
-        description: 'This action will restart the subscriber gateway to resolve connectivity issues.',
-        scope: `1 Gateway • ${getScopeDisplayLabel(scope)}`,
+        description: 'This action will restart the selected gateway device to resolve connectivity issues.',
+        scope: `1 Gateway Device • ${getScopeDisplayLabel(scope)}`,
         expectedImpact: 'Service interruption of 30-60 seconds. Subscriber will experience a brief disconnect.',
         rollbackHint: 'If issues persist after restart, escalate to Tier-2 support for hardware diagnostics.',
       };
@@ -550,10 +816,18 @@ function getScopedActionModal(scope: ScopeSelection) {
 }
 
 function getScopedInspectSubscriber(scope: ScopeSelection) {
+  if (scope.level === 'device') {
+    const gatewayContext = getScopedGatewayContext(scope);
+    return {
+      id: gatewayContext.subscriberId,
+      name: `${gatewayContext.subscriberName} • ${gatewayContext.gatewayName}`,
+    };
+  }
+
   if (scope.level === 'subscriber') {
     return {
-      id: scope.subscriber ?? 'SUB-7834',
-      name: SUBSCRIBER_LABELS[scope.subscriber ?? 'SUB-7834'] ?? 'John Smith',
+      id: scope.subscriber ?? DEFAULT_SUBSCRIBER_ID,
+      name: SUBSCRIBER_LABELS[scope.subscriber ?? DEFAULT_SUBSCRIBER_ID] ?? DEFAULT_SUBSCRIBER_NAME,
     };
   }
 
@@ -572,8 +846,8 @@ function getScopedInspectSubscriber(scope: ScopeSelection) {
   }
 
   return {
-    id: 'SUB-7834',
-    name: 'John Smith',
+    id: DEFAULT_SUBSCRIBER_ID,
+    name: DEFAULT_SUBSCRIBER_NAME,
   };
 }
 
@@ -689,33 +963,68 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
     case 'subscriber':
       return [
         {
+          id: 'sub-gateways',
+          title: 'List gateway devices',
+          description: 'Review all gateway devices under this subscriber.',
+          prompt: `Show gateway devices for ${scopeLabel}`,
+          response: `Here are the gateway devices currently assigned to ${scopeLabel}.`,
+          resultTypes: ['device-table', 'subscriber'],
+        },
+        {
+          id: 'sub-health',
+          title: 'Review subscriber health',
+          description: 'Summarize gateway health and subscriber-level alerts.',
+          prompt: `Review gateway health for ${scopeLabel}`,
+          response: `Here is the current gateway health summary for ${scopeLabel}.`,
+          resultTypes: ['metric', 'alerts', 'subscriber'],
+        },
+        {
           id: 'sub-topology',
           title: 'View subscriber topology',
-          description: 'Inspect gateway and connected client devices.',
+          description: 'Inspect all gateway locations and connected client segments.',
           prompt: `Show topology for ${scopeLabel}`,
           response: `Here is the network topology for ${scopeLabel}.`,
           resultTypes: ['topology'],
         },
         {
-          id: 'sub-speed-test',
+          id: 'sub-plan',
+          title: 'Review service plan',
+          description: 'Check plan context before drilling into a gateway device.',
+          prompt: `Show the current service plan for ${scopeLabel}`,
+          response: `Here is the current service plan for ${scopeLabel}.`,
+          resultTypes: ['service-plan'],
+        },
+      ];
+    case 'device':
+      return [
+        {
+          id: 'device-topology',
+          title: 'View gateway topology',
+          description: 'Inspect this gateway and its connected client devices.',
+          prompt: `Show topology for ${scopeLabel}`,
+          response: `Here is the network topology for ${scopeLabel}.`,
+          resultTypes: ['topology'],
+        },
+        {
+          id: 'device-speed-test',
           title: 'Run speed test',
-          description: 'Measure current download, upload, and latency.',
+          description: 'Measure current download, upload, and latency for this gateway.',
           prompt: `Run a speed test for ${scopeLabel}`,
           response: `Running a speed test for ${scopeLabel}.`,
           resultTypes: ['speed-test'],
         },
         {
-          id: 'sub-plan',
+          id: 'device-plan',
           title: 'Review current plan',
-          description: 'Check service tier, usage, and billing context.',
+          description: 'Check service tier, usage, and billing context for this gateway.',
           prompt: `Show the current service plan for ${scopeLabel}`,
           response: `Here is the current service plan for ${scopeLabel}.`,
           resultTypes: ['service-plan'],
         },
         {
-          id: 'sub-inspect',
-          title: 'Quick inspect subscriber',
-          description: 'Open the detailed diagnostic drawer for this subscriber.',
+          id: 'device-inspect',
+          title: 'Quick inspect gateway',
+          description: 'Open the detailed diagnostic drawer for this gateway context.',
           prompt: `Open a quick inspection for ${scopeLabel}`,
           response: `Opening the quick inspection view for ${scopeLabel}.`,
           openInspectDrawer: true,
@@ -730,6 +1039,7 @@ export function CommandCenter() {
   const shouldReduceMotion = useReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -737,6 +1047,12 @@ export function CommandCenter() {
   const [isFocused, setIsFocused] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
+  const [scopeScrollKey, setScopeScrollKey] = useState(0);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>({
+    targetLevel: null,
+    step: 'root',
+  });
   const [messages, setMessages] = useState<any[]>([
     {
       type: 'ai-text',
@@ -796,7 +1112,79 @@ export function CommandCenter() {
     return () => cancelAnimationFrame(frame);
   }, [lastUserMessageKey, shouldReduceMotion]);
 
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+
+    if (!container || scopeScrollKey === 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: shouldReduceMotion ? 'auto' : 'smooth',
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [scopeScrollKey, shouldReduceMotion]);
+
   const currentScopeActions = useMemo(() => getScopeActions(currentScope), [currentScope]);
+  const scopePaletteQuery = useMemo(
+    () => (input.startsWith('/') ? input.slice(1).trim() : ''),
+    [input],
+  );
+  const scopeCommandOptions = useMemo(
+    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery),
+    [scopePaletteQuery, scopePaletteState],
+  );
+  const isScopeCommandMode = input.startsWith('/');
+
+  useEffect(() => {
+    setActiveCommandIndex(0);
+  }, [input, scopePaletteState]);
+
+  useEffect(() => {
+    if (isScopeCommandMode) {
+      setScopePaletteState({
+        targetLevel: null,
+        step: 'root',
+      });
+      return;
+    }
+
+    setScopePaletteState({
+      targetLevel: null,
+      step: 'root',
+    });
+  }, [isScopeCommandMode]);
+
+  const applyScopeChange = (scope: ScopeSelection) => {
+    setInput('');
+    setActiveCommandIndex(0);
+    setScopePaletteState({
+      targetLevel: null,
+      step: 'root',
+    });
+    handleScopeChange(scope);
+  };
+
+  const handleScopeCommandSubmit = () => {
+    if (!scopeCommandOptions.length) {
+      toast.error('No matching scope found for this command.');
+      return;
+    }
+
+    const activeOption =
+      scopeCommandOptions[Math.min(activeCommandIndex, scopeCommandOptions.length - 1)];
+    if (activeOption.scope) {
+      applyScopeChange(activeOption.scope);
+      return;
+    }
+
+    if (activeOption.nextState) {
+      setScopePaletteState(activeOption.nextState);
+      setInput('/');
+    }
+  };
 
   const executeQuickAction = (action: ScopeQuickAction) => {
     setMessages((prev) => [
@@ -837,6 +1225,7 @@ export function CommandCenter() {
 
   const handleScopeChange = (scope: ScopeSelection) => {
     setCurrentScope(scope);
+    setScopeScrollKey((prev) => prev + 1);
     const scopeMessage = getScopeChangeMessage(scope);
     const scopeAssistant = getScopeAssistantCopy(scope);
     const actions = getScopeActions(scope);
@@ -866,7 +1255,9 @@ export function CommandCenter() {
       case 'organization':
         return `Now focused on ${getScopeDisplayLabel(scope)}. What would you like to know about this organization?`;
       case 'subscriber':
-        return `Viewing subscriber ${getScopeDisplayLabel(scope)}. I can show you their device topology, health metrics, and recent activity.`;
+        return `Viewing subscriber ${getScopeDisplayLabel(scope)}. This level summarizes the subscriber and its gateway devices. Select a gateway device for direct diagnostics and actions.`;
+      case 'device':
+        return `Viewing gateway device ${getScopeDisplayLabel(scope)}. I can now run device-level diagnostics, actions, and topology for this gateway.`;
       default:
         return 'Scope updated.';
     }
@@ -874,6 +1265,11 @@ export function CommandCenter() {
 
   const handleSend = () => {
     if (!input.trim()) return;
+
+    if (input.trim().startsWith('/')) {
+      handleScopeCommandSubmit();
+      return;
+    }
 
     const userInput = input.toLowerCase();
 
@@ -960,8 +1356,7 @@ export function CommandCenter() {
         ]);
       } else {
         // Default response
-        setMessages((prev) => [
-          ...prev,
+        const nextMessages = [
           {
             type: 'ai-text',
             message: `I analyzed ${getScopeDisplayLabel(currentScope)}. Here is what I found.`,
@@ -976,10 +1371,21 @@ export function CommandCenter() {
           {
             type: 'subscriber',
           },
-          {
+        ];
+
+        if (currentScope.level === 'subscriber') {
+          nextMessages.push({
+            type: 'device-table',
+          });
+        }
+
+        if (currentScope.level !== 'subscriber') {
+          nextMessages.push({
             type: 'action',
-          },
-        ]);
+          });
+        }
+
+        setMessages((prev) => [...prev, ...nextMessages]);
       }
     }, 1500);
   };
@@ -1050,7 +1456,7 @@ export function CommandCenter() {
             name={scopedSubscriberCard.name}
             status="degraded"
             healthScore={73}
-            devices={5}
+            devices={scopedSubscriberCard.devices}
             timestamp="10:24 AM"
             source={scopedSubscriberCard.source}
             onInspect={() => setShowInspectDrawer(true)}
@@ -1096,53 +1502,56 @@ export function CommandCenter() {
           <DeviceTableCard
             key={idx}
             title={getScopedDeviceTableTitle(currentScope)}
-            devices={[
-              {
-                id: 'GW-4521',
-                name: 'Gateway Downtown-01',
-                type: 'gateway',
-                status: 'online',
-                location: 'Main St & 5th Ave',
-                uptime: '45d 12h',
-                firmware: 'v2.4.1',
-              },
-              {
-                id: 'GW-4522',
-                name: 'Gateway Downtown-02',
-                type: 'gateway',
-                status: 'degraded',
-                location: 'Park Ave & 3rd St',
-                uptime: '23d 8h',
-                firmware: 'v2.4.0',
-              },
-              {
-                id: 'RT-1245',
-                name: 'Router Central Hub',
-                type: 'router',
-                status: 'online',
-                location: 'City Center',
-                uptime: '89d 5h',
-                firmware: 'v3.1.2',
-              },
-              {
-                id: 'AP-8821',
-                name: 'Access Point East',
-                type: 'ap',
-                status: 'online',
-                location: 'East District',
-                uptime: '12d 3h',
-                firmware: 'v1.8.5',
-              },
-              {
-                id: 'GW-4523',
-                name: 'Gateway West Zone',
-                type: 'gateway',
-                status: 'offline',
-                location: 'West End Plaza',
-                uptime: '0d 0h',
-                firmware: 'v2.3.9',
-              },
-            ]}
+            devices={
+              currentScope.level === 'subscriber'
+                ? getDevicesForSubscriber(currentScope.subscriber).map((device, deviceIndex) => ({
+                    id: device.id,
+                    name: `${device.name} Gateway`,
+                    type: 'gateway' as const,
+                    status: deviceIndex === 0 ? 'online' as const : 'degraded' as const,
+                    location: device.name,
+                    uptime: deviceIndex === 0 ? '45d 12h' : '23d 8h',
+                    firmware: deviceIndex === 0 ? 'v2.4.1' : 'v2.4.0',
+                  }))
+                : [
+                    {
+                      id: 'DEV-001',
+                      name: 'iPhone 14',
+                      type: 'gateway' as const,
+                      status: 'online' as const,
+                      location: 'Living Room',
+                      uptime: '12h 14m',
+                      firmware: '5GHz',
+                    },
+                    {
+                      id: 'DEV-002',
+                      name: 'MacBook Pro',
+                      type: 'router' as const,
+                      status: 'online' as const,
+                      location: 'Office',
+                      uptime: '9h 32m',
+                      firmware: '5GHz',
+                    },
+                    {
+                      id: 'DEV-003',
+                      name: 'Smart TV',
+                      type: 'ap' as const,
+                      status: 'online' as const,
+                      location: 'Media Room',
+                      uptime: '5h 01m',
+                      firmware: 'Ethernet',
+                    },
+                    {
+                      id: 'DEV-004',
+                      name: 'Desktop PC',
+                      type: 'router' as const,
+                      status: 'offline' as const,
+                      location: 'Study',
+                      uptime: '0h 18m',
+                      firmware: 'Ethernet',
+                    },
+                  ]
+            }
             timestamp="10:24 AM"
             source="Device Management System"
           />
@@ -1152,12 +1561,12 @@ export function CommandCenter() {
         return (
           <TopologyCard
             key={idx}
-            subscriberId="SUB-7834"
+            subscriberId={getScopedGatewayContext(currentScope).subscriberId}
             subscriberName={getScopedTopologyName(currentScope)}
             gateway={{
-              id: 'GW-4521-A',
-              name: 'Gateway Downtown-01',
-              status: 'online',
+              id: getScopedGatewayContext(currentScope).deviceId,
+              name: getScopedGatewayContext(currentScope).gatewayName,
+              status: currentScope.level === 'subscriber' ? 'degraded' : 'online',
             }}
             devices={[
               {
@@ -1275,11 +1684,107 @@ export function CommandCenter() {
     };
   };
 
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isScopeCommandMode) {
+      if (event.key === 'Enter') {
+        handleSend();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!scopeCommandOptions.length) return;
+      setActiveCommandIndex((prev) => (prev + 1) % scopeCommandOptions.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!scopeCommandOptions.length) return;
+      setActiveCommandIndex((prev) =>
+        prev === 0 ? scopeCommandOptions.length - 1 : prev - 1,
+      );
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setInput('');
+      setActiveCommandIndex(0);
+      setScopePaletteState({
+        targetLevel: null,
+        step: 'root',
+      });
+      return;
+    }
+
+    if (event.key === 'Backspace' && !scopePaletteQuery) {
+      if (scopePaletteState.step === 'root') return;
+
+      event.preventDefault();
+
+      if (scopePaletteState.step === 'region') {
+        setScopePaletteState({
+          targetLevel: null,
+          step: 'root',
+        });
+        return;
+      }
+
+      if (scopePaletteState.step === 'organization') {
+        setScopePaletteState((prev) => ({
+          targetLevel: prev.targetLevel,
+          step: 'region',
+        }));
+        return;
+      }
+
+      if (scopePaletteState.step === 'subscriber') {
+        setScopePaletteState((prev) => ({
+          targetLevel: prev.targetLevel,
+          step: 'organization',
+          region: prev.region,
+        }));
+        return;
+      }
+
+      if (scopePaletteState.step === 'device') {
+        setScopePaletteState((prev) => ({
+          targetLevel: prev.targetLevel,
+          step: 'subscriber',
+          region: prev.region,
+          organization: prev.organization,
+        }));
+      }
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleScopeCommandSubmit();
+    }
+  };
+
+  const handleScopeOptionClick = (option: ScopeCommandOption) => {
+    if (option.scope) {
+      applyScopeChange(option.scope);
+      return;
+    }
+
+    if (option.nextState) {
+      setScopePaletteState(option.nextState);
+      setInput('/');
+      setActiveCommandIndex(0);
+    }
+  };
+
   return (
     <AppLayout 
       rightPanel={<ContextPanel />} 
       scopeIndicator="Acme ISP • All Regions"
       onScopeChange={handleScopeChange}
+      scopeValue={currentScope}
     >
       <div className="h-full flex flex-col relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1437,7 +1942,7 @@ export function CommandCenter() {
           <div className="workspace-shell-chat">
             <div className="flex gap-2">
               <motion.div
-                className="relative flex-1 overflow-hidden rounded-[var(--radius-control)]"
+                className="relative flex-1 rounded-[var(--radius-control)]"
                 animate={
                   shouldReduceMotion
                     ? undefined
@@ -1451,6 +1956,69 @@ export function CommandCenter() {
                 }
                 transition={{ duration: 0.12, ease: 'easeOut' }}
               >
+                <AnimatePresence>
+                  {isScopeCommandMode && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute inset-x-0 bottom-full z-20 mb-2 overflow-hidden rounded-[calc(var(--radius-control)+4px)] border border-[color:var(--border)] bg-[var(--card)] shadow-[var(--shadow-sm)]"
+                    >
+                      <div className="border-b border-[color:var(--border)] px-3 py-2 text-[11px] text-[color:var(--neutral-500)]">
+                        Type `/` to start. Use arrows + Enter or click to choose one layer at a time. Press Backspace on an empty filter to go back.
+                      </div>
+                      <div className="border-b border-[color:var(--border)] px-3 py-2 text-[11px] text-[color:var(--neutral-500)]">
+                        <span className="font-medium text-[color:var(--foreground)]">
+                          {getScopePalettePlaceholder(scopePaletteState)}
+                        </span>
+                        {getScopePaletteContextLabel(scopePaletteState) && (
+                          <span className="ml-2">
+                            {getScopePaletteContextLabel(scopePaletteState)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-auto p-1.5">
+                        {scopeCommandOptions.length > 0 ? (
+                          scopeCommandOptions.map((option, index) => {
+                            const isActive = index === activeCommandIndex;
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onMouseEnter={() => setActiveCommandIndex(index)}
+                                onClick={() => handleScopeOptionClick(option)}
+                                className="flex w-full items-start justify-between rounded-xl px-3 py-2 text-left transition-colors"
+                                style={{
+                                  background: isActive ? 'var(--surface-base)' : 'transparent',
+                                }}
+                              >
+                                <div>
+                                  <div className="text-[12px] font-medium text-[color:var(--foreground)]">
+                                    {option.label}
+                                  </div>
+                                  <div className="text-[11px] text-[color:var(--neutral-500)]">
+                                    {option.description}
+                                  </div>
+                                </div>
+                                <div className="ml-3 flex items-center gap-2">
+                                  <span className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--neutral-400)]">
+                                    {option.commandLabel}
+                                  </span>
+                                  {isActive && <Check className="h-3.5 w-3.5 text-[color:var(--primary)]" />}
+                                </div>
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-4 text-[12px] text-[color:var(--neutral-500)]">
+                            No matches at this level. Keep filtering, or press Backspace to return to the previous layer.
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <motion.div
                   className="pointer-events-none absolute inset-0"
                   animate={
@@ -1468,13 +2036,14 @@ export function CommandCenter() {
                   }}
                 />
                 <motion.input
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={handleInputKeyDown}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder="Ask about network status, subscribers, or request actions..."
+                  placeholder={isScopeCommandMode ? getScopePalettePlaceholder(scopePaletteState) : "Ask about network status, or type / to switch scope..."}
                   className="relative z-10 w-full rounded-lg border px-3 py-2 text-[12px] transition-all"
                   style={{
                     background: 'var(--surface-raised)',

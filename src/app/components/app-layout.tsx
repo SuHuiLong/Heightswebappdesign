@@ -18,19 +18,23 @@ interface LayoutProps {
   showTopBar?: boolean;
   scopeIndicator?: string;
   onScopeChange?: (scope: ScopeSelection) => void;
+  scopeValue?: ScopeSelection;
 }
 
-export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndicator, onScopeChange }: LayoutProps) {
+export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndicator, onScopeChange, scopeValue }: LayoutProps) {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [currentScope, setCurrentScope] = useState<ScopeSelection>({
+  const [internalScope, setInternalScope] = useState<ScopeSelection>({
     level: 'all',
   });
+  const currentScope = scopeValue ?? internalScope;
 
   const handleScopeChange = (scope: ScopeSelection) => {
-    setCurrentScope(scope);
+    if (!scopeValue) {
+      setInternalScope(scope);
+    }
     if (onScopeChange) {
       onScopeChange(scope);
     }
@@ -155,7 +159,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             </AnimatePresence>
           </div>
 
-          {!isCollapsed && (
+          {/* {!isCollapsed && (
             <div
               className="border-b p-2.5"
               style={{ borderColor: 'var(--sidebar-border)' }}
@@ -184,7 +188,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
               </DropdownMenu>
             </div>
           )}
-
+ */}
           <nav className="flex-1 space-y-1 p-2.5">
             {navItems.map((item) => {
               const Icon = item.icon;

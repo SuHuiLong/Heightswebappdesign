@@ -14,6 +14,13 @@ import {
   ReceiptCard,
   DeviceTableCard,
   TopologyCard,
+  BandwidthChartCard,
+  SpeedTestCard,
+  OutageMapCard,
+  ServicePlanCard,
+  WorkOrderCard,
+  SLAStatusCard,
+  ProvisioningCard,
 } from '../components/chat-messages';
 import { ActionConfirmationModal } from '../components/action-confirmation-modal';
 import { SubscriberQuickInspectDrawer } from '../components/subscriber-quick-inspect-drawer';
@@ -147,6 +154,41 @@ export function CommandCenter() {
           {
             type: 'topology',
           },
+        ]);
+      } else if (userInput.includes('chart') || userInput.includes('history') || userInput.includes('历史') || userInput.includes('bandwidth')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: "Here's your bandwidth usage for the last 7 days:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'bandwidth-chart' },
+        ]);
+      } else if (userInput.includes('speed test') || userInput.includes('speed') || userInput.includes('测速')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: 'Running speed test on your connection...', timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'speed-test' },
+        ]);
+      } else if (userInput.includes('outage') || userInput.includes('故障') || userInput.includes('停服') || userInput.includes('down')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: 'Here are the currently active outages in your network:', timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'outage-map' },
+        ]);
+      } else if (userInput.includes('plan') || userInput.includes('套餐')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: "Here's the current service plan for this subscriber:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'service-plan' },
+        ]);
+      } else if (userInput.includes('work order') || userInput.includes('ticket') || userInput.includes('工单')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: "I've created a work order for this issue:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'work-order' },
+        ]);
+      } else if (userInput.includes('sla') || userInput.includes('uptime') || userInput.includes('可用性')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: "Here's the current SLA compliance status:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'sla-status' },
+        ]);
+      } else if (userInput.includes('provision') || userInput.includes('开通') || userInput.includes('新用户')) {
+        setMessages((prev) => [...prev,
+          { type: 'ai-text', message: "Here's the provisioning status for the new subscriber:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+          { type: 'provisioning' },
         ]);
       } else {
         // Default response
@@ -399,7 +441,28 @@ export function CommandCenter() {
             source="Network Topology Service"
           />
         );
-      
+
+      case 'bandwidth-chart':
+        return <BandwidthChartCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="Network Analytics Engine" />;
+
+      case 'speed-test':
+        return <SpeedTestCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="Speed Test Service" />;
+
+      case 'outage-map':
+        return <OutageMapCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="NOC Monitoring System" />;
+
+      case 'service-plan':
+        return <ServicePlanCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="Billing System" />;
+
+      case 'work-order':
+        return <WorkOrderCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="Ticketing System" />;
+
+      case 'sla-status':
+        return <SLAStatusCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="SLA Management System" />;
+
+      case 'provisioning':
+        return <ProvisioningCard key={idx} timestamp={new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} source="Provisioning Service" />;
+
       default:
         return null;
     }
@@ -668,6 +731,70 @@ export function CommandCenter() {
                     }, 1500);
                   }}
                   delay={0.4}
+                />
+                <SuggestionCard
+                  title="Bandwidth History"
+                  onClick={() => {
+                    const message = 'Show bandwidth history';
+                    setMessages((prev) => [...prev, { type: 'user', message, timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]);
+                    setIsTyping(true);
+                    setTimeout(() => {
+                      setIsTyping(false);
+                      setMessages((prev) => [...prev,
+                        { type: 'ai-text', message: "Here's your bandwidth usage for the last 7 days:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+                        { type: 'bandwidth-chart' },
+                      ]);
+                    }, 1500);
+                  }}
+                  delay={0.5}
+                />
+                <SuggestionCard
+                  title="Run Speed Test"
+                  onClick={() => {
+                    const message = 'Run speed test';
+                    setMessages((prev) => [...prev, { type: 'user', message, timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]);
+                    setIsTyping(true);
+                    setTimeout(() => {
+                      setIsTyping(false);
+                      setMessages((prev) => [...prev,
+                        { type: 'ai-text', message: 'Running speed test on your connection...', timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+                        { type: 'speed-test' },
+                      ]);
+                    }, 1500);
+                  }}
+                  delay={0.6}
+                />
+                <SuggestionCard
+                  title="Active Outages"
+                  onClick={() => {
+                    const message = 'Show active outages';
+                    setMessages((prev) => [...prev, { type: 'user', message, timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]);
+                    setIsTyping(true);
+                    setTimeout(() => {
+                      setIsTyping(false);
+                      setMessages((prev) => [...prev,
+                        { type: 'ai-text', message: 'Here are the currently active outages in your network:', timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+                        { type: 'outage-map' },
+                      ]);
+                    }, 1500);
+                  }}
+                  delay={0.7}
+                />
+                <SuggestionCard
+                  title="Current Plan"
+                  onClick={() => {
+                    const message = 'Show current plan';
+                    setMessages((prev) => [...prev, { type: 'user', message, timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]);
+                    setIsTyping(true);
+                    setTimeout(() => {
+                      setIsTyping(false);
+                      setMessages((prev) => [...prev,
+                        { type: 'ai-text', message: "Here's the current service plan for this subscriber:", timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) },
+                        { type: 'service-plan' },
+                      ]);
+                    }, 1500);
+                  }}
+                  delay={0.8}
                 />
               </div>
             </motion.div>

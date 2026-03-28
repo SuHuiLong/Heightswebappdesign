@@ -192,8 +192,7 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
         </motion.button>
 
         {/* Region Selector */}
-        {value.level !== 'all' && (
-          <>
+        <>
             <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
             <DropdownMenu open={showRegions} onOpenChange={setShowRegions}>
               <DropdownMenuTrigger asChild>
@@ -229,7 +228,6 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           </>
-        )}
 
         {/* Organization Selector */}
         {value.region && (

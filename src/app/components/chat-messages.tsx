@@ -1,7 +1,9 @@
-import { ReactNode } from 'react';
-import { User, Bot, TrendingUp, AlertTriangle, Users, Play, CheckCircle2, Clock, Network, Wifi, Monitor, Smartphone, Laptop, Tablet } from 'lucide-react';
+import { ReactNode, useState, useEffect } from 'react';
+import { User, Bot, TrendingUp, AlertTriangle, Users, Play, CheckCircle2, Clock, Network, Wifi, Monitor, Smartphone, Laptop, Tablet, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface UserMessageProps {
   message: string;
@@ -895,6 +897,320 @@ export function TopologyCard({
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── BandwidthChartCard ───────────────────────────────────────────────────
+
+const BANDWIDTH_DATA = [
+  { day: 'Mon', download: 423, upload: 78 },
+  { day: 'Tue', download: 387, upload: 82 },
+  { day: 'Wed', download: 512, upload: 95 },
+  { day: 'Thu', download: 467, upload: 88 },
+  { day: 'Fri', download: 498, upload: 91 },
+  { day: 'Sat', download: 341, upload: 63 },
+  { day: 'Sun', download: 298, upload: 54 },
+];
+
+interface BandwidthChartCardProps { timestamp: string; source: string; }
+
+export function BandwidthChartCard({ timestamp, source }: BandwidthChartCardProps) {
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>
+          Bandwidth Usage — Last 7 Days
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={BANDWIDTH_DATA}>
+            <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--neutral-500)' }} />
+            <YAxis tick={{ fontSize: 11, fill: 'var(--neutral-500)' }} unit=" Mbps" domain={[0, 600]} />
+            <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--foreground)' }} />
+            <Legend />
+            <Line type="monotone" dataKey="download" stroke="var(--primary)" strokeWidth={2} dot={false} name="Download" />
+            <Line type="monotone" dataKey="upload" stroke="var(--accent-color)" strokeWidth={2} dot={false} name="Upload" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── SpeedTestCard ────────────────────────────────────────────────────────
+
+interface SpeedTestCardProps { timestamp: string; source: string; }
+
+export function SpeedTestCard({ timestamp, source }: SpeedTestCardProps) {
+  const [progress, setProgress] = useState(0);
+  const [done, setDone] = useState(false);
+  const targets = { download: 487, upload: 92, latency: 8 };
+  const maxValues = { download: 600, upload: 150, latency: 100 };
+
+  useEffect(() => {
+    const start = Date.now();
+    const duration = 1800;
+    const frame = () => {
+      const elapsed = Date.now() - start;
+      const p = Math.min(elapsed / duration, 1);
+      setProgress(p);
+      if (p < 1) requestAnimationFrame(frame);
+      else setDone(true);
+    };
+    requestAnimationFrame(frame);
+  }, []);
+
+  const Ring = ({ value, max, color, label, unit }: { value: number; max: number; color: string; label: string; unit: string }) => {
+    const r = 40;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - (value / max) * progress);
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <svg width={100} height={100} viewBox="0 0 100 100">
+          <circle cx={50} cy={50} r={r} fill="none" stroke="var(--neutral-200)" strokeWidth={8} />
+          <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={8}
+            strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+            transform="rotate(-90 50 50)" />
+          <text x={50} y={54} textAnchor="middle" fontSize={14} fontWeight={600} fill="var(--foreground)">
+            {Math.round(value * progress)}
+          </text>
+        </svg>
+        <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{label}</div>
+        <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>{unit}</div>
+      </div>
+    );
+  };
+
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="text-sm font-medium mb-4" style={{ color: 'var(--foreground)' }}>Speed Test</div>
+        <div className="flex justify-around mb-3">
+          <Ring value={targets.download} max={maxValues.download} color="var(--primary)" label="Download" unit="Mbps" />
+          <Ring value={targets.upload} max={maxValues.upload} color="var(--accent-color)" label="Upload" unit="Mbps" />
+          <Ring value={targets.latency} max={maxValues.latency} color="var(--success)" label="Latency" unit="ms" />
+        </div>
+        {done && (
+          <div className="text-center text-sm font-medium" style={{ color: 'var(--success)' }}>Test Complete ✓</div>
+        )}
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── OutageMapCard ────────────────────────────────────────────────────────
+
+const OUTAGES = [
+  { severity: 'critical' as const, zone: 'Downtown Core', affected: 847, eta: '14:30' },
+  { severity: 'high' as const, zone: 'East District', affected: 312, eta: '15:00' },
+  { severity: 'medium' as const, zone: 'West Suburb', affected: 89, eta: '16:45' },
+];
+
+const SEVERITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  critical: { bg: 'var(--severity-critical-bg)', text: 'var(--severity-critical)', label: 'Critical' },
+  high: { bg: 'var(--severity-high-bg)', text: 'var(--severity-high)', label: 'High' },
+  medium: { bg: 'var(--severity-medium-bg)', text: 'var(--severity-medium)', label: 'Medium' },
+};
+
+interface OutageMapCardProps { timestamp: string; source: string; }
+
+export function OutageMapCard({ timestamp, source }: OutageMapCardProps) {
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Active Outages</div>
+          <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: 'var(--severity-critical-bg)', color: 'var(--severity-critical)' }}>
+            {OUTAGES.length} Active
+          </span>
+        </div>
+        <div className="flex flex-col gap-2">
+          {OUTAGES.map((o) => {
+            const col = SEVERITY_COLORS[o.severity];
+            return (
+              <div key={o.zone} className="flex items-center justify-between px-3 py-2 rounded" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: col.bg, color: col.text }}>{col.label}</span>
+                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>{o.zone}</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs" style={{ color: 'var(--neutral-500)' }}>{o.affected} affected</div>
+                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>ETA {o.eta}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-xs mt-3" style={{ color: 'var(--neutral-400)' }}>Last updated: {timestamp}</div>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── ServicePlanCard ──────────────────────────────────────────────────────
+
+interface ServicePlanCardProps { timestamp: string; source: string; }
+
+export function ServicePlanCard({ timestamp, source }: ServicePlanCardProps) {
+  const used = 342;
+  const cap = 500;
+  const pct = Math.round((used / cap) * 100);
+  const barColor = pct > 80 ? 'var(--critical)' : 'var(--primary)';
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="px-2 py-1 rounded text-xs font-semibold" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>Business Pro 500</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>$89.99/mo</span>
+        </div>
+        <div className="mb-3">
+          <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--neutral-500)' }}>
+            <span>Data Usage</span>
+            <span>{used} GB / {cap} GB ({pct}%)</span>
+          </div>
+          <div className="w-full h-2 rounded-full" style={{ background: 'var(--neutral-200)' }}>
+            <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: barColor }} />
+          </div>
+        </div>
+        <div className="text-xs mb-3" style={{ color: 'var(--neutral-500)' }}>
+          Billing cycle: Mar 1 – Mar 31, 2026
+          <span className="ml-2" style={{ color: 'var(--warning)' }}>3 days remaining</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {['Static IP', 'Priority Support', '24/7 NOC'].map((f) => (
+            <span key={f} className="px-2 py-0.5 rounded text-xs" style={{ background: 'var(--neutral-100)', color: 'var(--neutral-600)' }}>{f}</span>
+          ))}
+        </div>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── WorkOrderCard ────────────────────────────────────────────────────────
+
+interface WorkOrderCardProps { timestamp: string; source: string; }
+
+export function WorkOrderCard({ timestamp, source }: WorkOrderCardProps) {
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--success)' }} />
+          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Work Order Created</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+          <div><div style={{ color: 'var(--neutral-500)' }}>Ticket ID</div><div className="font-medium" style={{ color: 'var(--foreground)' }}>WO-20480</div></div>
+          <div><div style={{ color: 'var(--neutral-500)' }}>Category</div><div className="font-medium" style={{ color: 'var(--foreground)' }}>Network Issue</div></div>
+          <div><div style={{ color: 'var(--neutral-500)' }}>Priority</div><div><span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: 'var(--warning-bg)', color: 'var(--warning)' }}>High</span></div></div>
+          <div><div style={{ color: 'var(--neutral-500)' }}>Assigned</div><div className="font-medium" style={{ color: 'var(--foreground)' }}>Marcus Webb</div></div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>Open</span>
+          <Button size="sm" onClick={() => toast.success('Opening work order WO-20480')} style={{ background: 'var(--primary)', color: 'var(--primary-foreground)', borderRadius: 'var(--radius-control)' }}>
+            View Full Ticket
+          </Button>
+        </div>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── SLAStatusCard ────────────────────────────────────────────────────────
+
+const SLA_METRICS = [
+  { name: 'Uptime', target: '99.9%', actual: '99.97%', pass: true },
+  { name: 'Avg Response Time', target: '2.0h', actual: '2.1h', pass: false },
+  { name: 'Avg Resolution Time', target: '4.0h', actual: '3.8h', pass: true },
+];
+
+interface SLAStatusCardProps { timestamp: string; source: string; }
+
+export function SLAStatusCard({ timestamp, source }: SLAStatusCardProps) {
+  const compliant = SLA_METRICS.every((m) => m.pass);
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>SLA Compliance</span>
+          <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: compliant ? 'var(--success-bg)' : 'var(--critical-bg)', color: compliant ? 'var(--success)' : 'var(--critical)' }}>
+            {compliant ? 'Compliant' : 'At Risk'}
+          </span>
+        </div>
+        <table className="w-full text-xs">
+          <thead>
+            <tr style={{ color: 'var(--neutral-500)' }}>
+              <th className="text-left pb-2">Metric</th>
+              <th className="text-right pb-2">Target</th>
+              <th className="text-right pb-2">Actual</th>
+              <th className="text-right pb-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SLA_METRICS.map((m) => (
+              <tr key={m.name} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                <td className="py-2" style={{ color: 'var(--foreground)' }}>{m.name}</td>
+                <td className="py-2 text-right" style={{ color: 'var(--neutral-500)' }}>{m.target}</td>
+                <td className="py-2 text-right font-medium" style={{ color: m.pass ? 'var(--success)' : 'var(--critical)' }}>{m.actual}</td>
+                <td className="py-2 text-right" style={{ color: m.pass ? 'var(--success)' : 'var(--critical)' }}>{m.pass ? '✓' : '✗'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CardWrapper>
+  );
+}
+
+// ─── ProvisioningCard ─────────────────────────────────────────────────────
+
+const PROVISIONING_STEPS = [
+  { label: 'Account Created', status: 'done' as const, time: 'Mar 25, 10:00' },
+  { label: 'Equipment Ordered', status: 'done' as const, time: 'Mar 25, 10:02' },
+  { label: 'Equipment Shipped', status: 'active' as const, time: 'In transit — ETA Mar 30' },
+  { label: 'ONT Online', status: 'pending' as const, time: 'Pending' },
+  { label: 'Service Activated', status: 'pending' as const, time: 'Pending' },
+];
+
+interface ProvisioningCardProps { timestamp: string; source: string; }
+
+export function ProvisioningCard({ timestamp, source }: ProvisioningCardProps) {
+  const done = PROVISIONING_STEPS.filter((s) => s.status === 'done').length;
+  const pct = Math.round((done / PROVISIONING_STEPS.length) * 100);
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="p-4">
+        <div className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>
+          Provisioning: Alex Turner <span style={{ color: 'var(--neutral-400)' }}>(ACC-20391)</span>
+        </div>
+        <div className="flex flex-col">
+          {PROVISIONING_STEPS.map((step, i) => {
+            const isLast = i === PROVISIONING_STEPS.length - 1;
+            const StepIcon = step.status === 'done' ? CheckCircle2 : step.status === 'active' ? Clock : Circle;
+            const iconColor = step.status === 'done' ? 'var(--success)' : step.status === 'active' ? 'var(--warning)' : 'var(--neutral-400)';
+            const lineColor = step.status === 'done' ? 'var(--success)' : 'var(--neutral-200)';
+            return (
+              <div key={step.label} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <StepIcon className="h-4 w-4 flex-shrink-0" style={{ color: iconColor }} />
+                  {!isLast && <div className="w-px flex-1 my-1" style={{ background: lineColor, minHeight: '16px' }} />}
+                </div>
+                <div className="pb-3">
+                  <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{step.label}</div>
+                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>{step.time}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-1">
+          <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--neutral-500)' }}>
+            <span>Progress</span><span>{pct}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full" style={{ background: 'var(--neutral-200)' }}>
+            <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: 'var(--primary)' }} />
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   DEFAULT_SUBSCRIBER_NAME,
   buildScopeSelection,
   getDevicesForSubscriber,
+  getGatewaySiteLabel,
   getOrganizationsForRegion,
   getSubscribersForOrganization,
   getParentScopeForDevice,
@@ -23,6 +24,7 @@ import {
   AITextMessage,
   ScopeActionsCard,
   ScopeActionOption,
+  SearchResultsCard,
   MetricCard,
   AlertListCard,
   SubscriberCard,
@@ -49,6 +51,7 @@ type ResultMessageType =
   | 'alerts'
   | 'subscriber'
   | 'action'
+  | 'search-results'
   | 'device-table'
   | 'topology'
   | 'bandwidth-chart'
@@ -59,11 +62,22 @@ type ResultMessageType =
   | 'sla-status'
   | 'provisioning';
 
+type SearchResultStatus = 'healthy' | 'watch' | 'critical' | 'online' | 'degraded' | 'offline' | 'active';
+
+interface SearchResultItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  meta?: string;
+  status?: SearchResultStatus;
+}
+
 interface ScopeQuickAction extends ScopeActionOption {
   prompt: string;
   response: string;
   resultTypes?: ResultMessageType[];
   openInspectDrawer?: boolean;
+  resultMode?: 'search-results' | 'activate-search';
 }
 
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -86,6 +100,11 @@ interface ScopePaletteState {
   subscriber?: string;
 }
 
+interface ScopeCommandInput {
+  command: ScopeCommandName | null;
+  filter: string;
+}
+
 function matchesScopeQuery(query: string, ...values: Array<string | undefined>) {
   if (!query) return true;
 
@@ -93,7 +112,139 @@ function matchesScopeQuery(query: string, ...values: Array<string | undefined>) 
   return values.some((value) => normalizeScopeSearchValue(value ?? '').includes(normalizedQuery));
 }
 
-function getRootScopeCommandOptions(): ScopeCommandOption[] {
+function getScopePaletteContext(scope: ScopeSelection) {
+  return {
+    region: scope.region,
+    organization: scope.organization,
+    subscriber: scope.subscriber,
+  };
+}
+
+function getScopePaletteStateForTarget(
+  targetLevel: ScopeCommandName | null,
+  currentScope: ScopeSelection,
+): ScopePaletteState {
+  const context = getScopePaletteContext(currentScope);
+
+  if (!targetLevel) {
+    return {
+      targetLevel: null,
+      step: 'root',
+      ...context,
+    };
+  }
+
+  if (targetLevel === 'all') {
+    return {
+      targetLevel,
+      step: 'root',
+      ...context,
+    };
+  }
+
+  if (targetLevel === 'region') {
+    return {
+      targetLevel,
+      step: 'region',
+    };
+  }
+
+  if (targetLevel === 'organization') {
+    return context.region
+      ? {
+          targetLevel,
+          step: 'organization',
+          region: context.region,
+        }
+      : {
+          targetLevel,
+          step: 'region',
+        };
+  }
+
+  if (targetLevel === 'subscriber') {
+    if (context.organization) {
+      return {
+        targetLevel,
+        step: 'subscriber',
+        region: context.region,
+        organization: context.organization,
+      };
+    }
+
+    if (context.region) {
+      return {
+        targetLevel,
+        step: 'organization',
+        region: context.region,
+      };
+    }
+
+    return {
+      targetLevel,
+      step: 'region',
+    };
+  }
+
+  if (context.subscriber) {
+    return {
+      targetLevel,
+      step: 'device',
+      region: context.region,
+      organization: context.organization,
+      subscriber: context.subscriber,
+    };
+  }
+
+  if (context.organization) {
+    return {
+      targetLevel,
+      step: 'subscriber',
+      region: context.region,
+      organization: context.organization,
+    };
+  }
+
+  if (context.region) {
+    return {
+      targetLevel,
+      step: 'organization',
+      region: context.region,
+    };
+  }
+
+  return {
+    targetLevel,
+    step: 'region',
+  };
+}
+
+function parseScopeCommandInput(input: string): ScopeCommandInput | null {
+  if (!input.startsWith('/')) return null;
+
+  const raw = input.slice(1).trim();
+  if (!raw) {
+    return { command: null, filter: '' };
+  }
+
+  const [token, ...rest] = raw.split(/\s+/);
+  const command = token?.toLowerCase();
+  const knownCommands: ScopeCommandName[] = ['all', 'region', 'organization', 'subscriber', 'device'];
+
+  if (command && knownCommands.includes(command as ScopeCommandName)) {
+    return {
+      command: command as ScopeCommandName,
+      filter: rest.join(' ').trim(),
+    };
+  }
+
+  return {
+    command: null,
+    filter: raw,
+  };
+}
+
+function getRootScopeCommandOptions(currentScope: ScopeSelection): ScopeCommandOption[] {
   return [
     {
       id: 'scope-all',
@@ -106,25 +257,25 @@ function getRootScopeCommandOptions(): ScopeCommandOption[] {
       id: 'target-region',
       label: 'Region',
       description: 'Choose a region scope.',
-      nextState: { targetLevel: 'region', step: 'region' },
+      nextState: getScopePaletteStateForTarget('region', currentScope),
     },
     {
       id: 'target-organization',
       label: 'Organization',
       description: 'Choose region, then organization.',
-      nextState: { targetLevel: 'organization', step: 'region' },
+      nextState: getScopePaletteStateForTarget('organization', currentScope),
     },
     {
       id: 'target-subscriber',
       label: 'Subscriber',
       description: 'Choose region, organization, then subscriber.',
-      nextState: { targetLevel: 'subscriber', step: 'region' },
+      nextState: getScopePaletteStateForTarget('subscriber', currentScope),
     },
     {
       id: 'target-device',
       label: 'Device',
       description: 'Choose region, organization, subscriber, then gateway device.',
-      nextState: { targetLevel: 'device', step: 'region' },
+      nextState: getScopePaletteStateForTarget('device', currentScope),
     },
   ];
 }
@@ -164,10 +315,11 @@ function getScopePaletteContextLabel(state: ScopePaletteState) {
 function getScopeCommandOptions(
   state: ScopePaletteState,
   query: string,
+  currentScope: ScopeSelection,
 ): ScopeCommandOption[] {
   switch (state.step) {
     case 'root':
-      return getRootScopeCommandOptions().filter((option) =>
+      return getRootScopeCommandOptions(currentScope).filter((option) =>
         matchesScopeQuery(query, option.label, option.description, option.commandLabel),
       );
     case 'region':
@@ -270,7 +422,8 @@ function getScopedGatewayContext(scope: ScopeSelection) {
     subscriberName,
     deviceId: selectedDevice.id,
     deviceName: selectedDevice.name,
-    gatewayName: `${selectedDevice.name} Gateway`,
+    gatewayName: `${getGatewaySiteLabel(subscriberName, selectedDevice.name)} Gateway`,
+    siteName: getGatewaySiteLabel(subscriberName, selectedDevice.name),
   };
 }
 
@@ -851,6 +1004,143 @@ function getScopedInspectSubscriber(scope: ScopeSelection) {
   };
 }
 
+function getQuickActionSearchResults(
+  action: ScopeQuickAction,
+  scope: ScopeSelection,
+): {
+  title: string;
+  source: string;
+  emptyMessage: string;
+  items: SearchResultItem[];
+} | null {
+  switch (action.id) {
+    case 'all-regions':
+      return {
+        title: 'Regional Overview',
+        source: 'Fleet Scope Index',
+        emptyMessage: 'No regions available.',
+        items: REGIONS.map((region) => ({
+          id: region.id,
+          title: region.name,
+          subtitle: `${region.organizationCount} organizations • ${region.subscriberCount} subscribers • ${region.deviceCount} devices`,
+          meta: `${region.market} • ${region.timezone}`,
+          status: region.status,
+        })),
+      };
+    case 'all-providers':
+      return {
+        title: 'ISP Search Results',
+        source: 'Fleet Provider Directory',
+        emptyMessage: 'No providers found across the fleet.',
+        items: getOrganizationsForRegion().map((organization) => ({
+          id: organization.id,
+          title: organization.name,
+          subtitle: `${organization.subscriberCount} subscribers • ${organization.deviceCount} devices`,
+          meta: `${REGION_LABELS[organization.regionId] ?? organization.regionId} • ${organization.serviceModel}`,
+          status: organization.status === 'incident' ? 'critical' : organization.status === 'watch' ? 'watch' : 'online',
+        })),
+      };
+    case 'region-organizations':
+    case 'region-search-organization':
+      return {
+        title: `${getScopeDisplayLabel(scope)} ISPs`,
+        source: 'Regional Provider Directory',
+        emptyMessage: 'No providers found in this region.',
+        items: getOrganizationsForRegion(scope.region).map((organization) => ({
+          id: organization.id,
+          title: organization.name,
+          subtitle: `${organization.subscriberCount} subscribers • ${organization.deviceCount} devices`,
+          meta: `${organization.tier} tier • ${organization.serviceModel} • ${organization.nocRegion}`,
+          status: organization.status === 'incident' ? 'critical' : organization.status === 'watch' ? 'watch' : 'online',
+        })),
+      };
+    case 'org-subscribers':
+    case 'org-search-subscriber':
+      return {
+        title: `${getScopeDisplayLabel(scope)} Subscribers`,
+        source: 'Organization Subscriber Directory',
+        emptyMessage: 'No subscribers found in this organization.',
+        items: getSubscribersForOrganization(scope.organization).map((subscriber) => ({
+          id: subscriber.id,
+          title: `${subscriber.name} (${subscriber.id})`,
+          subtitle: `${subscriber.plan} • ${subscriber.city}`,
+          meta: `${subscriber.deviceCount} gateways • ${subscriber.serviceAddress}`,
+          status: subscriber.status === 'delinquent' ? 'critical' : subscriber.status === 'watch' ? 'watch' : 'active',
+        })),
+      };
+    case 'sub-gateways':
+      return {
+        title: `${getScopeDisplayLabel(scope)} Gateway Overview`,
+        source: 'Subscriber Gateway Inventory',
+        emptyMessage: 'No gateway devices found for this subscriber.',
+        items: getDevicesForSubscriber(scope.subscriber).map((device) => ({
+          id: device.id,
+          title: `${device.name} Gateway`,
+          subtitle: `${device.model} • Firmware ${device.firmware}`,
+          meta: `${device.connectionType} • Health ${device.healthScore} • Last seen ${new Date(device.lastSeen).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}`,
+          status: device.status,
+        })),
+      };
+    case 'device-topology':
+      return {
+        title: 'Peer Gateways in Current Subscriber',
+        source: 'Gateway Scope Directory',
+        emptyMessage: 'No peer gateways found for this subscriber.',
+        items: getDevicesForSubscriber(scope.subscriber).map((device) => ({
+          id: device.id,
+          title: `${device.name} Gateway`,
+          subtitle: `${device.model} • ${device.connectionType}`,
+          meta: `${device.serial} • Health ${device.healthScore}`,
+          status: device.status,
+        })),
+      };
+    default:
+      return null;
+  }
+}
+
+function getQuickActionSearchActivation(
+  action: ScopeQuickAction,
+  scope: ScopeSelection,
+): { inputValue: string; nextState: ScopePaletteState } | null {
+  switch (action.id) {
+    case 'all-providers':
+      return {
+        inputValue: '/organization ',
+        nextState: {
+          targetLevel: 'organization',
+          step: 'organization',
+        },
+      };
+    case 'region-search-organization':
+      return {
+        inputValue: '/organization ',
+        nextState: {
+          targetLevel: 'organization',
+          step: 'organization',
+          region: scope.region,
+        },
+      };
+    case 'org-search-subscriber':
+      return {
+        inputValue: '/subscriber ',
+        nextState: {
+          targetLevel: 'subscriber',
+          step: 'subscriber',
+          region: scope.region,
+          organization: scope.organization,
+        },
+      };
+    default:
+      return null;
+  }
+}
+
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
   const scopeLabel = getScopeDisplayLabel(scope);
 
@@ -858,20 +1148,20 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
     case 'all':
       return [
         {
-          id: 'all-device-list',
-          title: 'Show fleet device list',
-          description: 'Review gateways, routers, and APs across the fleet.',
-          prompt: 'Show the fleet device list across all tenants',
-          response: `Here is the current device inventory for ${scopeLabel}.`,
-          resultTypes: ['device-table'],
+          id: 'all-regions',
+          title: 'Show regions',
+          description: 'Start from the regional breakdown before drilling into providers.',
+          prompt: 'Show me the regional breakdown across all tenants',
+          response: `I can break ${scopeLabel} down by region first, then drill into providers within each region.`,
+          resultMode: 'search-results',
         },
         {
-          id: 'all-outages',
-          title: 'View active outages',
-          description: 'See current outages and impacted zones.',
-          prompt: 'Show all active outages across the fleet',
-          response: `Here are the active outages for ${scopeLabel}.`,
-          resultTypes: ['outage-map'],
+          id: 'all-providers',
+          title: 'Search ISP',
+          description: 'Find a specific provider before jumping to subscribers or devices.',
+          prompt: 'Search for a specific ISP across all tenants',
+          response: `Tell me which ISP you want, and I will narrow ${scopeLabel} down to the matching provider.`,
+          resultMode: 'activate-search',
         },
         {
           id: 'all-bandwidth',
@@ -893,12 +1183,20 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
     case 'region':
       return [
         {
-          id: 'region-devices',
-          title: 'Show region devices',
-          description: 'List devices in the selected region.',
-          prompt: `Show me all devices in ${scopeLabel}`,
-          response: `Here are the devices currently operating in ${scopeLabel}.`,
-          resultTypes: ['device-table'],
+          id: 'region-organizations',
+          title: 'Show ISPs in region',
+          description: 'Review providers in this region before drilling into subscribers.',
+          prompt: `Show organizations in ${scopeLabel}`,
+          response: `I can list the ISPs operating in ${scopeLabel} so you can pick the right provider first.`,
+          resultMode: 'search-results',
+        },
+        {
+          id: 'region-search-organization',
+          title: 'Search ISP',
+          description: 'Find a provider by name inside this region.',
+          prompt: `Search for an ISP in ${scopeLabel}`,
+          response: `Tell me the ISP name you want inside ${scopeLabel}, and I will narrow it down.`,
+          resultMode: 'activate-search',
         },
         {
           id: 'region-outages',
@@ -928,12 +1226,20 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
     case 'organization':
       return [
         {
-          id: 'org-health',
-          title: 'Review org health',
-          description: 'Summarize health, alerts, and next actions.',
-          prompt: `Review operational health for ${scopeLabel}`,
-          response: `Here is the current health summary for ${scopeLabel}.`,
-          resultTypes: ['metric', 'alerts', 'action'],
+          id: 'org-subscribers',
+          title: 'Show subscribers',
+          description: 'Review subscribers in this provider before drilling into gateways.',
+          prompt: `Show subscribers in ${scopeLabel}`,
+          response: `I can list subscribers inside ${scopeLabel} so you can choose the right account first.`,
+          resultMode: 'search-results',
+        },
+        {
+          id: 'org-search-subscriber',
+          title: 'Search subscriber',
+          description: 'Find a subscriber by name or ID inside this provider.',
+          prompt: `Search for a subscriber in ${scopeLabel}`,
+          response: `Tell me the subscriber name or ID you want inside ${scopeLabel}, and I will narrow it down.`,
+          resultMode: 'activate-search',
         },
         {
           id: 'org-sla',
@@ -967,8 +1273,9 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'List gateway devices',
           description: 'Review all gateway devices under this subscriber.',
           prompt: `Show gateway devices for ${scopeLabel}`,
-          response: `Here are the gateway devices currently assigned to ${scopeLabel}.`,
+          response: `Here are the gateway sites currently assigned to ${scopeLabel}.`,
           resultTypes: ['device-table', 'subscriber'],
+          resultMode: 'search-results',
         },
         {
           id: 'sub-health',
@@ -1004,6 +1311,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           prompt: `Show topology for ${scopeLabel}`,
           response: `Here is the network topology for ${scopeLabel}.`,
           resultTypes: ['topology'],
+          resultMode: 'search-results',
         },
         {
           id: 'device-speed-test',
@@ -1049,10 +1357,9 @@ export function CommandCenter() {
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
   const [scopeScrollKey, setScopeScrollKey] = useState(0);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-  const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>({
-    targetLevel: null,
-    step: 'root',
-  });
+  const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
+    getScopePaletteStateForTarget(null, { level: 'all' }),
+  );
   const [messages, setMessages] = useState<any[]>([
     {
       type: 'ai-text',
@@ -1128,13 +1435,11 @@ export function CommandCenter() {
   }, [scopeScrollKey, shouldReduceMotion]);
 
   const currentScopeActions = useMemo(() => getScopeActions(currentScope), [currentScope]);
-  const scopePaletteQuery = useMemo(
-    () => (input.startsWith('/') ? input.slice(1).trim() : ''),
-    [input],
-  );
+  const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
+  const scopePaletteQuery = useMemo(() => parsedScopeCommand?.filter ?? '', [parsedScopeCommand]);
   const scopeCommandOptions = useMemo(
-    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery),
-    [scopePaletteQuery, scopePaletteState],
+    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery, currentScope),
+    [currentScope, scopePaletteQuery, scopePaletteState],
   );
   const isScopeCommandMode = input.startsWith('/');
 
@@ -1143,27 +1448,18 @@ export function CommandCenter() {
   }, [input, scopePaletteState]);
 
   useEffect(() => {
-    if (isScopeCommandMode) {
-      setScopePaletteState({
-        targetLevel: null,
-        step: 'root',
-      });
+    if (!isScopeCommandMode) {
+      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
       return;
     }
 
-    setScopePaletteState({
-      targetLevel: null,
-      step: 'root',
-    });
-  }, [isScopeCommandMode]);
+    setScopePaletteState(getScopePaletteStateForTarget(parsedScopeCommand?.command ?? null, currentScope));
+  }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
   const applyScopeChange = (scope: ScopeSelection) => {
     setInput('');
     setActiveCommandIndex(0);
-    setScopePaletteState({
-      targetLevel: null,
-      step: 'root',
-    });
+    setScopePaletteState(getScopePaletteStateForTarget(null, scope));
     handleScopeChange(scope);
   };
 
@@ -1182,7 +1478,6 @@ export function CommandCenter() {
 
     if (activeOption.nextState) {
       setScopePaletteState(activeOption.nextState);
-      setInput('/');
     }
   };
 
@@ -1213,6 +1508,28 @@ export function CommandCenter() {
         action.resultTypes.forEach((type) => {
           nextMessages.push({ type });
         });
+      }
+
+      if (action.resultMode === 'search-results') {
+        const searchResults = getQuickActionSearchResults(action, currentScope);
+        if (searchResults) {
+          nextMessages.push({
+            type: 'search-results',
+            ...searchResults,
+          });
+        }
+      }
+
+      if (action.resultMode === 'activate-search') {
+        const searchActivation = getQuickActionSearchActivation(action, currentScope);
+        if (searchActivation) {
+          setInput(searchActivation.inputValue);
+          setScopePaletteState(searchActivation.nextState);
+          setActiveCommandIndex(0);
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+          });
+        }
       }
 
       if (action.openInspectDrawer) {
@@ -1446,6 +1763,18 @@ export function CommandCenter() {
             source="Alert Management System"
           />
         );
+
+      case 'search-results':
+        return (
+          <SearchResultsCard
+            key={idx}
+            title={msg.title}
+            items={msg.items}
+            emptyMessage={msg.emptyMessage}
+            timestamp={getTimestamp()}
+            source={msg.source}
+          />
+        );
       
       case 'subscriber': {
         const scopedSubscriberCard = getScopedSubscriberCard(currentScope);
@@ -1506,10 +1835,16 @@ export function CommandCenter() {
               currentScope.level === 'subscriber'
                 ? getDevicesForSubscriber(currentScope.subscriber).map((device, deviceIndex) => ({
                     id: device.id,
-                    name: `${device.name} Gateway`,
+                    name: `${getGatewaySiteLabel(
+                      SUBSCRIBER_LABELS[currentScope.subscriber ?? DEFAULT_SUBSCRIBER_ID] ?? DEFAULT_SUBSCRIBER_NAME,
+                      device.name,
+                    )} Gateway`,
                     type: 'gateway' as const,
                     status: deviceIndex === 0 ? 'online' as const : 'degraded' as const,
-                    location: device.name,
+                    location: getGatewaySiteLabel(
+                      SUBSCRIBER_LABELS[currentScope.subscriber ?? DEFAULT_SUBSCRIBER_ID] ?? DEFAULT_SUBSCRIBER_NAME,
+                      device.name,
+                    ),
                     uptime: deviceIndex === 0 ? '45d 12h' : '23d 8h',
                     firmware: deviceIndex === 0 ? 'v2.4.1' : 'v2.4.0',
                   }))
@@ -1519,7 +1854,7 @@ export function CommandCenter() {
                       name: 'iPhone 14',
                       type: 'gateway' as const,
                       status: 'online' as const,
-                      location: 'Living Room',
+                      location: getScopedGatewayContext(currentScope).siteName,
                       uptime: '12h 14m',
                       firmware: '5GHz',
                     },
@@ -1528,7 +1863,7 @@ export function CommandCenter() {
                       name: 'MacBook Pro',
                       type: 'router' as const,
                       status: 'online' as const,
-                      location: 'Office',
+                      location: getScopedGatewayContext(currentScope).siteName,
                       uptime: '9h 32m',
                       firmware: '5GHz',
                     },
@@ -1537,7 +1872,7 @@ export function CommandCenter() {
                       name: 'Smart TV',
                       type: 'ap' as const,
                       status: 'online' as const,
-                      location: 'Media Room',
+                      location: getScopedGatewayContext(currentScope).siteName,
                       uptime: '5h 01m',
                       firmware: 'Ethernet',
                     },
@@ -1546,7 +1881,7 @@ export function CommandCenter() {
                       name: 'Desktop PC',
                       type: 'router' as const,
                       status: 'offline' as const,
-                      location: 'Study',
+                      location: getScopedGatewayContext(currentScope).siteName,
                       uptime: '0h 18m',
                       firmware: 'Ethernet',
                     },
@@ -1712,10 +2047,7 @@ export function CommandCenter() {
       event.preventDefault();
       setInput('');
       setActiveCommandIndex(0);
-      setScopePaletteState({
-        targetLevel: null,
-        step: 'root',
-      });
+      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
       return;
     }
 
@@ -1725,10 +2057,7 @@ export function CommandCenter() {
       event.preventDefault();
 
       if (scopePaletteState.step === 'region') {
-        setScopePaletteState({
-          targetLevel: null,
-          step: 'root',
-        });
+        setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
         return;
       }
 
@@ -1774,7 +2103,6 @@ export function CommandCenter() {
 
     if (option.nextState) {
       setScopePaletteState(option.nextState);
-      setInput('/');
       setActiveCommandIndex(0);
     }
   };

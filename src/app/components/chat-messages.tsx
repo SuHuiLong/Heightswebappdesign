@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { User, Bot, TrendingUp, AlertTriangle, Users, Play, CheckCircle2, Clock, Network, Wifi, Monitor, Smartphone, Laptop, Tablet, Circle } from 'lucide-react';
+import { User, Bot, TrendingUp, AlertTriangle, Users, Play, CheckCircle2, Clock, Network, Wifi, Monitor, Smartphone, Laptop, Tablet, Circle, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { motion, useReducedMotion } from 'motion/react';
 import { toast } from 'sonner';
@@ -500,6 +500,99 @@ export function ReceiptCard({
         >
           View in Audit Log
         </Button>
+      </div>
+    </CardWrapper>
+  );
+}
+
+interface SearchResultsCardProps {
+  title: string;
+  items: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+    meta?: string;
+    status?: 'healthy' | 'watch' | 'critical' | 'online' | 'degraded' | 'offline' | 'active';
+  }>;
+  emptyMessage?: string;
+  timestamp: string;
+  source: string;
+}
+
+export function SearchResultsCard({
+  title,
+  items,
+  emptyMessage = 'No matching results in the current scope.',
+  timestamp,
+  source,
+}: SearchResultsCardProps) {
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'healthy':
+      case 'online':
+      case 'active':
+        return 'var(--success)';
+      case 'watch':
+      case 'degraded':
+        return 'var(--warning)';
+      case 'critical':
+      case 'offline':
+        return 'var(--critical)';
+      default:
+        return 'var(--neutral-400)';
+    }
+  };
+
+  return (
+    <CardWrapper timestamp={timestamp} source={source}>
+      <div className="chat-card-content p-3.5">
+        <div className="mb-3 flex items-center gap-2">
+          <Search className="h-5 w-5" style={{ color: 'var(--primary)' }} />
+          <h3 className="chat-card-title font-semibold" style={{ color: 'var(--foreground)' }}>
+            {title}
+          </h3>
+          <div className="chat-card-chip ml-auto rounded bg-[var(--neutral-100)] px-2 py-0.5 text-[11px] font-medium text-[color:var(--neutral-600)]">
+            {items.length} results
+          </div>
+        </div>
+
+        {items.length ? (
+          <div className="space-y-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-base)] px-3 py-2.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 text-[13px] font-medium text-[color:var(--foreground)]">
+                      {item.title}
+                    </div>
+                    <div className="text-[12px] text-[color:var(--neutral-500)]">{item.subtitle}</div>
+                    {item.meta ? (
+                      <div className="mt-1 text-[11px] text-[color:var(--neutral-400)]">{item.meta}</div>
+                    ) : null}
+                  </div>
+                  {item.status ? (
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: getStatusColor(item.status) }}
+                      />
+                      <span className="text-[11px] font-medium text-[color:var(--neutral-500)]">
+                        {item.status}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[var(--surface-base)] px-3 py-4 text-[12px] text-[color:var(--neutral-500)]">
+            {emptyMessage}
+          </div>
+        )}
       </div>
     </CardWrapper>
   );

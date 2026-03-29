@@ -98,6 +98,26 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
   const buttonClassName =
     'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-medium transition-all';
 
+  const formatStatus = (status?: string) => {
+    if (!status) return '';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const formatServiceModel = (serviceModel?: string) => {
+    if (!serviceModel) return '';
+    return serviceModel.charAt(0).toUpperCase() + serviceModel.slice(1);
+  };
+
+  const formatLastSeen = (value?: string) => {
+    if (!value) return '';
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(value));
+  };
+
   return (
     <div className="flex items-center gap-1.5">
       <div className="ml-1 flex items-center gap-0.5">
@@ -148,7 +168,12 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                     }}
                   >
                     <MapPin className="h-4 w-4 mr-2" style={{ color: 'var(--secondary-foreground)' }} />
-                    {region.name}
+                    <div className="flex min-w-0 flex-col">
+                      <span>{region.name}</span>
+                      <span className="text-[10px] text-[color:var(--neutral-500)]">
+                        {formatStatus(region.status)} • {region.organizationCount} orgs • {region.subscriberCount} subscribers
+                      </span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -192,7 +217,12 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                   }}
                 >
                   <Building2 className="h-4 w-4 mr-2" style={{ color: 'var(--success)' }} />
-                  {org.name}
+                  <div className="flex min-w-0 flex-col">
+                    <span>{org.name}</span>
+                    <span className="text-[10px] text-[color:var(--neutral-500)]">
+                      {formatStatus(org.status)} • {formatServiceModel(org.serviceModel)} • {org.subscriberCount} subscribers
+                    </span>
+                  </div>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -238,7 +268,14 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                     }}
                   >
                     <Users className="h-4 w-4 mr-2" style={{ color: 'var(--warning)' }} />
-                    {sub.name} <span className="ml-1 text-xs text-[color:var(--neutral-400)]">({sub.id})</span>
+                    <div className="flex min-w-0 flex-col">
+                      <span>
+                        {sub.name} <span className="ml-1 text-xs text-[color:var(--neutral-400)]">({sub.id})</span>
+                      </span>
+                      <span className="text-[10px] text-[color:var(--neutral-500)]">
+                        {formatStatus(sub.status)} • {sub.plan} • {sub.city}
+                      </span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -285,8 +322,15 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                     }}
                   >
                     <Wifi className="h-4 w-4 mr-2" style={{ color: 'var(--primary)' }} />
-                    {device.name}
-                    <span className="ml-1 text-xs text-[color:var(--neutral-400)]">Gateway</span>
+                    <div className="flex min-w-0 flex-col">
+                      <span>
+                        {device.name}
+                        <span className="ml-1 text-xs text-[color:var(--neutral-400)]">Gateway</span>
+                      </span>
+                      <span className="text-[10px] text-[color:var(--neutral-500)]">
+                        {formatStatus(device.status)} • Health {device.healthScore} • Seen {formatLastSeen(device.lastSeen)}
+                      </span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

@@ -5,6 +5,7 @@ import { ThemeToggle } from '../components/theme-toggle';
 import { Button } from '../components/ui/button';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelector, ScopeSelection } from './scope-selector';
+import { useIsMobile } from './ui/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ interface LayoutProps {
 export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndicator, onScopeChange, scopeValue }: LayoutProps) {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [internalScope, setInternalScope] = useState<ScopeSelection>({
@@ -45,12 +47,11 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
     { path: '/audit', label: 'Audit', icon: FileText },
     { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
-
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (
         <div
-          className="relative flex h-12 items-center gap-3 border-b px-3.5"
+          className="relative flex h-12 items-center gap-2 border-b px-3"
           style={{ 
             borderColor: 'var(--border)',
             background: 'var(--surface-base)',
@@ -65,10 +66,11 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          <div className="flex items-center gap-1.5 text-sm">
+          <div className="min-w-0 flex-1 items-center gap-1.5 text-sm">
             <ScopeSelector
               value={currentScope}
               onChange={handleScopeChange}
+              compact={isMobile}
             />
           </div>
 
@@ -97,7 +99,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
             <ThemeToggle />
           </div>
         </div>
@@ -194,7 +196,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
-                <Link key={item.path} to={item.path}>
+                <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}>
                   <motion.div
                     whileHover={{ x: 2 }}
                     whileTap={{ scale: 0.98 }}

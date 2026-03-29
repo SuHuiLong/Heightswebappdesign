@@ -21,9 +21,10 @@ export type { ScopeLevel, ScopeSelection } from '../lib/scope-data';
 interface ScopeSelectorProps {
   value: ScopeSelection;
   onChange: (value: ScopeSelection) => void;
+  compact?: boolean;
 }
 
-export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
+export function ScopeSelector({ value, onChange, compact = false }: ScopeSelectorProps) {
   const [showRegions, setShowRegions] = useState(false);
   const [showOrganizations, setShowOrganizations] = useState(false);
   const [showSubscribers, setShowSubscribers] = useState(false);
@@ -95,8 +96,9 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
   const showSubscriber = visibleLevels.has('subscriber') && !!value.organization;
   const showDevice = visibleLevels.has('device') && !!value.subscriber;
 
-  const buttonClassName =
-    'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-medium transition-all';
+  const buttonClassName = compact
+    ? 'flex h-8 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium transition-all'
+    : 'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-medium transition-all';
 
   const formatStatus = (status?: string) => {
     if (!status) return '';
@@ -119,8 +121,8 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
   };
 
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="ml-1 flex items-center gap-0.5">
+    <div className={`flex items-center ${compact ? 'gap-1' : 'gap-1.5'}`}>
+      <div className={`${compact ? 'min-w-0 flex flex-1 items-center gap-1' : 'ml-1 flex items-center gap-0.5'}`}>
         {showAll && (
           <motion.button
             onClick={() => onChange({ level: 'all' })}
@@ -132,7 +134,14 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            All
+            {compact && value.level === 'all' ? (
+              <>
+                <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'currentColor' }} />
+                <span>All</span>
+              </>
+            ) : (
+              'All'
+            )}
           </motion.button>
         )}
 
@@ -150,9 +159,17 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {value.region ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
-                  {value.region ? REGIONS.find(r => r.id === value.region)?.name : 'Select Region'}
-                  <ChevronDown className="h-3 w-3" />
+                  {compact && value.level !== 'region' ? (
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <>
+                      {value.region ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
+                      <span className={compact ? 'max-w-[120px] truncate' : ''}>
+                        {value.region ? REGIONS.find(r => r.id === value.region)?.name : 'Select Region'}
+                      </span>
+                      <ChevronDown className="h-3 w-3" />
+                    </>
+                  )}
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -196,11 +213,19 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {value.organization ? <Building2 className="h-3.5 w-3.5 shrink-0" /> : null}
-                {value.organization
-                  ? availableOrganizations.find(o => o.id === value.organization)?.name
-                  : 'Select Org'}
-                <ChevronDown className="h-3 w-3" />
+                {compact && value.level !== 'organization' ? (
+                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <>
+                    {value.organization ? <Building2 className="h-3.5 w-3.5 shrink-0" /> : null}
+                    <span className={compact ? 'max-w-[120px] truncate' : ''}>
+                      {value.organization
+                        ? availableOrganizations.find(o => o.id === value.organization)?.name
+                        : 'Select Org'}
+                    </span>
+                    <ChevronDown className="h-3 w-3" />
+                  </>
+                )}
               </motion.button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -237,19 +262,27 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
             <DropdownMenu open={showSubscribers} onOpenChange={setShowSubscribers}>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className={buttonClassName}
-                  style={{
-                    background: value.level === 'subscriber' && !value.device ? 'var(--warning)' : 'transparent',
-                    color: value.subscriber ? 'var(--foreground)' : 'var(--muted-foreground)',
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {value.subscriber ? <Users className="h-3.5 w-3.5 shrink-0" /> : null}
-                  {value.subscriber
-                    ? availableSubscribers.find(s => s.id === value.subscriber)?.name
-                    : 'Select Sub'}
-                  <ChevronDown className="h-3 w-3" />
+                className={buttonClassName}
+                style={{
+                  background: value.level === 'subscriber' && !value.device ? 'var(--warning)' : 'transparent',
+                  color: value.subscriber ? 'var(--foreground)' : 'var(--muted-foreground)',
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                  {compact && value.level !== 'subscriber' ? (
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <>
+                      {value.subscriber ? <Users className="h-3.5 w-3.5 shrink-0" /> : null}
+                      <span className={compact ? 'max-w-[120px] truncate' : ''}>
+                        {value.subscriber
+                          ? availableSubscribers.find(s => s.id === value.subscriber)?.name
+                          : 'Select Sub'}
+                      </span>
+                      <ChevronDown className="h-3 w-3" />
+                    </>
+                  )}
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -291,19 +324,27 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
             <DropdownMenu open={showDevices} onOpenChange={setShowDevices}>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className={buttonClassName}
-                  style={{
-                    background: value.level === 'device' ? 'var(--primary)' : 'transparent',
-                    color: value.device ? 'var(--foreground)' : 'var(--muted-foreground)',
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {value.device ? <Wifi className="h-3.5 w-3.5 shrink-0" /> : null}
-                  {value.device
-                    ? availableDevices.find((device) => device.id === value.device)?.name
-                    : 'Select Device'}
-                  <ChevronDown className="h-3 w-3" />
+                className={buttonClassName}
+                style={{
+                  background: value.level === 'device' ? 'var(--primary)' : 'transparent',
+                  color: value.device ? 'var(--foreground)' : 'var(--muted-foreground)',
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                  {compact && value.level !== 'device' ? (
+                    <Wifi className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <>
+                      {value.device ? <Wifi className="h-3.5 w-3.5 shrink-0" /> : null}
+                      <span className={compact ? 'max-w-[120px] truncate' : ''}>
+                        {value.device
+                          ? availableDevices.find((device) => device.id === value.device)?.name
+                          : 'Select Device'}
+                      </span>
+                      <ChevronDown className="h-3 w-3" />
+                    </>
+                  )}
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">

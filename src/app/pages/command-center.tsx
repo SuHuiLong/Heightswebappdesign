@@ -45,6 +45,9 @@ import { SubscriberQuickInspectDrawer } from '../components/subscriber-quick-ins
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { resolveScenario } from '../lib/scenario-resolver';
+import { ScenarioDefinition } from '../lib/scenario-definitions';
+import { WorkspaceSession } from '../components/generative/workspace-session';
 
 type ResultMessageType =
   | 'metric'
@@ -1343,6 +1346,39 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
   }
 }
 
+const GENERATIVE_PROMPTS = [
+  {
+    id: 'gen-firmware',
+    title: 'Find firmware regression',
+    query: 'Show me all home gateways with unusual connection drops in the last 24 hours, group failing devices by MAC vendor, and correlate with recent firmware updates.',
+  },
+  {
+    id: 'gen-dpi',
+    title: 'Analyze DPI traffic anomalies',
+    query: 'Compare L7 streaming vs gaming traffic across Europe this week and highlight anomalies in TLS traffic classification.',
+  },
+  {
+    id: 'gen-forecast',
+    title: 'Forecast ingestion cost',
+    query: 'Forecast next month\'s ingestion cost with 15% device growth.',
+  },
+  {
+    id: 'gen-churn',
+    title: 'Find silent sufferers',
+    query: 'Identify households with high latency in streaming/gaming over the last 14 days with no support tickets. Rank by churn risk.',
+  },
+  {
+    id: 'gen-upsell',
+    title: 'Find bandwidth saturation',
+    query: 'Show users saturating WAN bandwidth >2 hours/day due to video calls and 4K streaming.',
+  },
+  {
+    id: 'gen-vas',
+    title: 'VAS via device fingerprint',
+    query: 'Find households with new gaming consoles or children\'s devices but no parental control subscription.',
+  },
+];
+
 export function CommandCenter() {
   const shouldReduceMotion = useReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1355,6 +1391,7 @@ export function CommandCenter() {
   const [isFocused, setIsFocused] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
+  const [activeScenario, setActiveScenario] = useState<ScenarioDefinition | null>(null);
   const [scopeScrollKey, setScopeScrollKey] = useState(0);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
@@ -1455,6 +1492,38 @@ export function CommandCenter() {
 
     setScopePaletteState(getScopePaletteStateForTarget(parsedScopeCommand?.command ?? null, currentScope));
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
+
+  const handleGenerativePrompt = (query: string) => {
+    const matchedScenario = resolveScenario(query);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'user',
+        message: query,
+        timestamp: getTimestamp(),
+      },
+    ]);
+
+    if (matchedScenario) {
+      setIsTyping(true);
+      setActiveScenario(matchedScenario);
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'generative-workspace',
+            scenario: matchedScenario,
+          },
+        ]);
+      }, 300);
+    } else {
+      // Fallback to normal send flow
+      setInput(query);
+      setTimeout(() => handleSend(), 100);
+    }
+  };
 
   const applyScopeChange = (scope: ScopeSelection) => {
     setInput('');
@@ -1606,10 +1675,29 @@ export function CommandCenter() {
     setInput('');
     setIsTyping(true);
 
+    // Check if the query matches a generative scenario
+    const matchedScenario = resolveScenario(input);
+
+    if (matchedScenario) {
+      setActiveScenario(matchedScenario);
+      // Add a brief AI acknowledgment, then the generative workspace will handle the rest
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'generative-workspace',
+            scenario: matchedScenario,
+          },
+        ]);
+      }, 300);
+      return;
+    }
+
     // Simulate AI response with different content based on input
     setTimeout(() => {
       setIsTyping(false);
-      
+
       if (userInput.includes('device') || userInput.includes('gateway') || userInput.includes('list')) {
         // Show device table
         setMessages((prev) => [
@@ -1724,6 +1812,15 @@ export function CommandCenter() {
 
   const renderMessage = (msg: any, idx: number) => {
     switch (msg.type) {
+      case 'generative-workspace':
+        return (
+          <WorkspaceSession
+            key={idx}
+            scenario={msg.scenario}
+            onFollowUp={(prompt) => handleGenerativePrompt(prompt)}
+          />
+        );
+
       case 'user':
         return <UserMessage key={idx} message={msg.message} timestamp={msg.timestamp} />;
       
@@ -2109,7 +2206,7 @@ export function CommandCenter() {
 
   return (
     <AppLayout 
-      rightPanel={<ContextPanel />} 
+      rightPanel={<ContextPanel scope={currentScope} activeScenario={activeScenario} />} 
       scopeIndicator="Acme ISP • All Regions"
       onScopeChange={handleScopeChange}
       scopeValue={currentScope}
@@ -2203,9 +2300,23 @@ export function CommandCenter() {
                 className="mb-3 text-[13px]"
                 style={{ color: 'var(--neutral-500)' }}
               >
-                Ask me anything about your network operations. I can help you:
+                Ask me anything about your network operations. Try a generative scenario:
               </motion.p>
 
+              <div className="workspace-shell-suggestions mb-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {GENERATIVE_PROMPTS.map((prompt, promptIndex) => (
+                  <SuggestionCard
+                    key={prompt.id}
+                    title={prompt.title}
+                    onClick={() => handleGenerativePrompt(prompt.query)}
+                    delay={0.08 + promptIndex * 0.06}
+                  />
+                ))}
+              </div>
+
+              <div className="mb-2 text-[11px] font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
+                SCOPE ACTIONS
+              </div>
               <div className="workspace-shell-suggestions mb-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {currentScopeActions.map((action, actionIndex) => (
                   <SuggestionCard

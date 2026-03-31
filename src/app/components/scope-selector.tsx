@@ -90,9 +90,8 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
     return levels;
   }, [currentLevelIndex, isMobile, value.level]);
 
-  const showAll = visibleLevels.has('all');
   const showRegion = visibleLevels.has('region');
-  const showOrganization = visibleLevels.has('organization') && !!value.region;
+  const showOrganization = visibleLevels.has('organization') && !!value.region && value.region !== 'all';
   const showSubscriber = visibleLevels.has('subscriber') && !!value.organization;
   const showDevice = visibleLevels.has('device') && !!value.subscriber;
 
@@ -123,49 +122,25 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
   return (
     <div className={`flex items-center ${compact ? 'gap-1' : 'gap-1.5'}`}>
       <div className={`${compact ? 'min-w-0 flex flex-1 items-center gap-1' : 'ml-1 flex items-center gap-0.5'}`}>
-        {showAll && (
-          <motion.button
-            onClick={() => onChange({ level: 'all' })}
-            className={buttonClassName}
-            style={{
-              background: value.level === 'all' ? 'var(--primary)' : 'transparent',
-              color: value.level === 'all' ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-            }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {compact && value.level === 'all' ? (
-              <>
-                <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'currentColor' }} />
-                <span>All</span>
-              </>
-            ) : (
-              'All'
-            )}
-          </motion.button>
-        )}
-
         {showRegion && (
-          <>
-            {showAll && <ChevronRight className="h-3 w-3 text-[color:var(--neutral-400)]" />}
-            <DropdownMenu open={showRegions} onOpenChange={setShowRegions}>
+          <DropdownMenu open={showRegions} onOpenChange={setShowRegions}>
               <DropdownMenuTrigger asChild>
                 <motion.button
                   className={buttonClassName}
                   style={{
-                    background: value.level === 'region' && !value.organization ? 'var(--accent-color)' : 'transparent',
-                    color: value.region ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    background: (value.level === 'region' || value.level === 'all') && !value.organization ? 'var(--accent-color)' : 'transparent',
+                    color: (value.region || value.level === 'all') ? 'var(--foreground)' : 'var(--muted-foreground)',
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {compact && value.level !== 'region' ? (
+                  {compact && value.level !== 'region' && value.level !== 'all' ? (
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                   ) : (
                     <>
-                      {value.region ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
+                      {(value.region || value.level === 'all') ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
                       <span className={compact ? 'max-w-[120px] truncate' : ''}>
-                        {value.region ? REGIONS.find(r => r.id === value.region)?.name : 'Select Region'}
+                        {value.region ? REGIONS.find(r => r.id === value.region)?.name : value.level === 'all' ? 'All Tenants (Fleet)' : 'Select Region'}
                       </span>
                       <ChevronDown className="h-3 w-3" />
                     </>
@@ -177,25 +152,32 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
                   <DropdownMenuItem
                     key={region.id}
                     onClick={() => {
-                      onChange({
-                        level: 'region',
-                        region: region.id,
-                      });
+                      if (region.id === 'all') {
+                        onChange({
+                          level: 'all',
+                        });
+                      } else {
+                        onChange({
+                          level: 'region',
+                          region: region.id,
+                        });
+                      }
                       setShowRegions(false);
                     }}
                   >
-                    <MapPin className="h-4 w-4 mr-2" style={{ color: 'var(--secondary-foreground)' }} />
+                    <MapPin className="h-4 w-4 mr-2" style={{ color: region.id === 'all' ? 'var(--primary)' : 'var(--secondary-foreground)' }} />
                     <div className="flex min-w-0 flex-col">
                       <span>{region.name}</span>
-                      <span className="text-[10px] text-[color:var(--neutral-500)]">
-                        {formatStatus(region.status)} • {region.organizationCount} orgs • {region.subscriberCount} subscribers
-                      </span>
+                      {region.id !== 'all' && (
+                        <span className="text-[10px] text-[color:var(--neutral-500)]">
+                          {formatStatus(region.status)} • {region.organizationCount} orgs • {region.subscriberCount} subscribers
+                        </span>
+                      )}
                     </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </>
         )}
 
         {showOrganization && (

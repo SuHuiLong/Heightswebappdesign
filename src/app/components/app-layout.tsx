@@ -1,7 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { ChevronDown, Activity, FileText, Settings as SettingsIcon, Search, Menu, X } from 'lucide-react';
-import { ThemeToggle } from '../components/theme-toggle';
+import { ChevronDown, Activity, FileText, Settings as SettingsIcon, Search, Menu, X, Users, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelector, ScopeSelection } from './scope-selector';
@@ -43,16 +42,25 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
   };
 
   const navItems = [
-    { path: '/', label: 'Command Center', icon: Activity },
+    { path: '/operations', label: 'Command Center', icon: Activity },
     { path: '/audit', label: 'Audit', icon: FileText },
     { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
+
+  const workspaceItems = [
+    { path: '/operations', label: 'Operations', icon: Activity, id: 'operations' },
+    { path: '/support', label: 'Support', icon: Users, id: 'support' },
+    { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth', disabled: true },
+  ];
+
+  // Check if current page should show workspace switcher (operations or support)
+  const isWorkspacePage = location.pathname === '/operations' || location.pathname === '/support';
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (
         <div
           className="relative flex h-12 items-center gap-2 border-b px-3"
-          style={{ 
+          style={{
             borderColor: 'var(--border)',
             background: 'var(--surface-base)',
           }}
@@ -66,42 +74,95 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          <div className="min-w-0 flex-1 items-center gap-1.5 text-sm">
-            <ScopeSelector
-              value={currentScope}
-              onChange={handleScopeChange}
-              compact={isMobile}
-            />
-          </div>
-
-          <div className="hidden max-w-sm flex-1 md:block">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors" style={{ color: 'var(--neutral-400)' }} />
-              <input
-                type="text"
-                placeholder="Search subscribers, devices, events..."
-                className="h-8 w-full rounded-lg border pl-8 pr-3 text-sm transition-all"
-                style={{
-                  borderColor: 'var(--border)',
-                  borderRadius: 'var(--radius-control)',
-                  background: 'var(--surface-raised)',
-                  boxShadow: 'var(--shadow-xs)',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--primary)';
-                  e.target.style.boxShadow = '0 0 0 4px var(--focus-ring)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'var(--border)';
-                  e.target.style.boxShadow = 'var(--shadow-xs)';
-                }}
-              />
+          {/* Heights Logo */}
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'var(--primary)' }}>
+              <span className="text-base font-bold text-white">H</span>
             </div>
+            <span className="hidden sm:inline text-base font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+              Heights
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <ThemeToggle />
-          </div>
+          <div className="h-6 w-px" style={{ background: 'var(--border-subtle)' }} />
+
+          {/* Workspace switcher buttons - Only show on workspace pages */}
+          {isWorkspacePage && (
+            <>
+              <div className="flex items-center gap-2">
+                {workspaceItems.map((ws) => {
+                  const Icon = ws.icon;
+                  const isActive = location.pathname === ws.path;
+                  return (
+                    <Link
+                      key={ws.path}
+                      to={ws.path}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        ws.disabled ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      style={{
+                        background: isActive && !ws.disabled ? 'var(--surface-raised)' : 'transparent',
+                        color: isActive && !ws.disabled ? 'var(--foreground)' : 'var(--neutral-400)',
+                        border: isActive && !ws.disabled ? '1px solid var(--border)' : '1px solid transparent',
+                      }}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{ws.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="h-6 w-px" style={{ background: 'var(--border-subtle)' }} />
+            </>
+          )}
+
+          {isWorkspacePage ? (
+            <>
+              <div className="flex-1"></div>
+
+              <div className="hidden max-w-sm md:block">
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors" style={{ color: 'var(--neutral-400)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search subscribers, devices, events..."
+                    className="h-8 w-full rounded-lg border pl-8 pr-3 text-sm transition-all"
+                    style={{
+                      borderColor: 'var(--border)',
+                      borderRadius: 'var(--radius-control)',
+                      background: 'var(--surface-raised)',
+                      boxShadow: 'var(--shadow-xs)',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--primary)';
+                      e.target.style.boxShadow = '0 0 0 4px var(--focus-ring)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--border)';
+                      e.target.style.boxShadow = 'var(--shadow-xs)';
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="h-6 w-px hidden md:block" style={{ background: 'var(--border-subtle)' }} />
+
+              <div className="flex items-center gap-1.5 text-sm">
+                <ScopeSelector
+                  value={currentScope}
+                  onChange={handleScopeChange}
+                  compact={isMobile}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1">
+              <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+                {navItems.find(item => item.path === location.pathname)?.label || 'Heights'}
+              </h1>
+            </div>
+          )}
         </div>
       )}
 
@@ -121,7 +182,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
 
         <motion.aside
           initial={false}
-          animate={{ 
+          animate={{
             width: isCollapsed ? '80px' : '240px',
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
@@ -131,7 +192,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
             transform transition-transform duration-300
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}
-          style={{ 
+          style={{
             borderColor: 'var(--sidebar-border)',
             background: 'var(--sidebar)',
             boxShadow: 'var(--shadow-xs)',
@@ -139,58 +200,6 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
           onMouseEnter={() => window.innerWidth >= 1024 && window.innerWidth < 1280 && setIsCollapsed(false)}
           onMouseLeave={() => window.innerWidth >= 1024 && window.innerWidth < 1280 && setIsCollapsed(true)}
         >
-          <div className="relative flex h-12 items-center overflow-hidden border-b px-3.5" style={{ borderColor: 'var(--sidebar-border)' }}>
-            <AnimatePresence mode="wait">
-              {!isCollapsed ? (
-                <h2
-                  key="full"
-                  className="text-base font-semibold tracking-tight"
-                  style={{ color: 'var(--sidebar-foreground)' }}
-                >
-                  Heights
-                </h2>
-              ) : (
-                <div
-                  key="short"
-                  className="mx-auto text-base font-semibold"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  H
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* {!isCollapsed && (
-            <div
-              className="border-b p-2.5"
-              style={{ borderColor: 'var(--sidebar-border)' }}
-            >
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between text-[12px]"
-                    style={{
-                      background: 'var(--sidebar-accent)',
-                      borderColor: 'var(--sidebar-border)',
-                      color: 'var(--sidebar-foreground)',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <span className="font-medium tracking-[0.01em]">Acme ISP</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuItem>Acme ISP</DropdownMenuItem>
-                  <DropdownMenuItem>TechNet Co.</DropdownMenuItem>
-                  <DropdownMenuItem>FastFiber Inc.</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
- */}
           <nav className="flex-1 space-y-1 p-2.5">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -212,16 +221,16 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
                       <motion.div
                         layoutId="sidebar-active"
                         className="absolute inset-0 rounded-lg"
-                        style={{ 
+                        style={{
                           background: 'var(--sidebar-primary)',
                           border: '1px solid var(--sidebar-border)',
                         }}
                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       />
                     )}
-                    
+
                     <Icon className={`h-4.5 w-4.5 relative z-10 ${isCollapsed ? 'mx-auto' : ''}`} />
-                    
+
                     <AnimatePresence mode="wait">
                       {!isCollapsed && (
                         <span

@@ -74,6 +74,7 @@ type SubscriberSeed = Omit<SubscriberEntity, 'organizationId' | 'deviceCount'> &
 };
 
 const REGION_SEEDS: RegionSeed[] = [
+  { id: 'all', name: 'All Tenants (Fleet)', code: 'ALL', market: 'Global', timezone: 'UTC', climateRisk: 'low', status: 'healthy' },
   { id: 'north', name: 'North Region', code: 'NRTH', market: 'Northeast', timezone: 'America/New_York', climateRisk: 'moderate', status: 'healthy' },
   { id: 'south', name: 'South Region', code: 'STH', market: 'Southeast', timezone: 'America/Chicago', climateRisk: 'high', status: 'watch' },
   { id: 'east', name: 'East Region', code: 'EST', market: 'Mid-Atlantic', timezone: 'America/New_York', climateRisk: 'moderate', status: 'healthy' },

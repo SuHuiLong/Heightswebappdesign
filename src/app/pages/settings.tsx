@@ -2,10 +2,11 @@ import { AppLayout } from '../components/app-layout';
 import { Bell, Shield, Palette, Database, Users, Lock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
+import { ThemeToggle } from '../components/theme-toggle';
 
 export function Settings() {
   return (
-    <AppLayout showTopBar={false}>
+    <AppLayout showTopBar={true}>
       <div className="h-full overflow-auto">
         <div className="workspace-shell-settings px-3 py-3 lg:px-4 lg:py-4 2xl:px-5 2xl:py-5">
           <h1 className="mb-2 text-lg font-semibold tracking-tight text-[color:var(--foreground)] lg:text-[1.125rem]">
@@ -128,16 +129,8 @@ export function Settings() {
             >
               <SettingItem
                 label="Theme"
-                description="Choose between light and dark mode"
-                control={
-                  <select
-                    className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-[12px] text-[color:var(--foreground)] shadow-[var(--shadow-xs)]"
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
-                  </select>
-                }
+                description="Toggle between light and dark mode"
+                control={<ThemeToggle />}
               />
               <SettingItem
                 label="Information Density"

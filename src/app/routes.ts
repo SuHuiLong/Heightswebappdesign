@@ -1,8 +1,37 @@
 import { createBrowserRouter } from "react-router";
 
 export const router = createBrowserRouter([
+  // Welcome / Workspace Selection (New Entry Point)
   {
     path: "/",
+    lazy: async () => ({
+      Component: (await import("./pages/workspace-welcome")).WorkspaceWelcome,
+    }),
+  },
+  // Operations Workspace
+  {
+    path: "/operations",
+    lazy: async () => ({
+      Component: (await import("./pages/workspace-operations")).OperationsWorkspace,
+    }),
+  },
+  // Support Workspace
+  {
+    path: "/support",
+    lazy: async () => ({
+      Component: (await import("./pages/workspace-support")).SupportWorkspace,
+    }),
+  },
+  // Growth Workspace (Placeholder - not implemented)
+  {
+    path: "/growth",
+    lazy: async () => ({
+      Component: (await import("./pages/workspace-welcome")).WorkspaceWelcome,
+    }),
+  },
+  // Legacy Command Center (kept for reference)
+  {
+    path: "/command-center",
     lazy: async () => ({
       Component: (await import("./pages/command-center")).CommandCenter,
     }),

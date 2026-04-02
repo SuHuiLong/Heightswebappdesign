@@ -1,8 +1,24 @@
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
-import { Activity, Users, TrendingUp, ArrowRight } from 'lucide-react';
+import { Activity, Users, TrendingUp, ArrowRight, ChevronRight, Sparkles } from 'lucide-react';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS } from '../lib/workspace-definitions';
 import { useReducedMotion } from 'motion/react';
+
+// Suggested investigations shown as "Suggested Questions" on each card
+const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
+  operations: [
+    'Find gateways with connection drops correlated to firmware versions',
+    'Investigate BGP route flapping across multiple PoPs',
+  ],
+  support: [
+    'Self-heal Wi-Fi interference by migrating gateway channels',
+    'Protect video call QoS during peak congestion periods',
+  ],
+  growth: [
+    'Identify subscribers at risk of churning with no support tickets',
+    'Find households eligible for parental control subscriptions',
+  ],
+};
 
 const WORKSPACE_ROUTES = {
   operations: '/operations',
@@ -82,14 +98,17 @@ export function WorkspaceWelcome() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: shouldReduceMotion ? 0.01 : 0.4 }}
-            className="mb-12 text-center"
+            className="mb-10 text-center"
           >
-            <h2 className="mb-3 text-3xl font-semibold tracking-tight lg:text-4xl" style={{ color: 'var(--foreground)' }}>
-              Choose your workspace
-            </h2>
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <Sparkles className="h-5 w-5" style={{ color: 'var(--primary)' }} />
+              <h2 className="text-3xl font-semibold tracking-tight lg:text-4xl" style={{ color: 'var(--foreground)' }}>
+                Where do you want to start?
+              </h2>
+            </div>
             <p className="max-w-2xl mx-auto text-base" style={{ color: 'var(--neutral-400)' }}>
-              Select a work mode to begin. Each workspace is tailored to a specific operational context
-              with focused tools and AI assistance.
+              Each workspace is a focused environment for a specific type of work.
+              Ask a question, and the system will organize results around it.
             </p>
           </motion.div>
 
@@ -97,8 +116,7 @@ export function WorkspaceWelcome() {
           <div className="grid gap-6 lg:grid-cols-3">
             {(Object.values(WORKSPACES) as const).map((workspace, index) => {
               const Icon = getWorkspaceIcon(workspace.id);
-              const isImplemented = workspace.isImplemented;
-              const starterTasks = WORKSPACE_STARTER_TASKS[workspace.id];
+              const investigations = SUGGESTED_INVESTIGATIONS[workspace.id];
 
               return (
                 <motion.div
@@ -113,11 +131,10 @@ export function WorkspaceWelcome() {
                   whileTap={{ scale: shouldReduceMotion ? 1 : 0.98 }}
                 >
                   <div
-                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-pointer"
+                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-lg"
                     style={{
                       background: 'var(--card)',
-                      borderColor: isImplemented ? 'var(--border)' : 'var(--border-subtle)',
-                      opacity: isImplemented ? 1 : 0.7,
+                      borderColor: 'var(--border)',
                     }}
                   >
                     {/* Card gradient overlay */}
@@ -138,124 +155,91 @@ export function WorkspaceWelcome() {
 
                     {/* Card content */}
                     <div className="relative flex h-full flex-col p-6">
-                      {/* Header */}
+                      {/* Icon + Title + Tagline */}
                       <div className="mb-4 flex items-start justify-between">
-                        <motion.div
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-110"
-                          style={{
-                            background: workspace.accentColor + '20',
-                            borderColor: workspace.accentColor + '40',
-                            color: 'var(--primary)',
-                          }}
-                        >
-                          <Icon className="h-6 w-6" />
-                        </motion.div>
-                        {!isImplemented && (
-                          <span
-                            className="rounded-full px-2.5 py-1 text-xs font-medium"
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-110"
                             style={{
-                              background: 'var(--surface-raised)',
-                              color: 'var(--neutral-500)',
+                              background: workspace.accentColor + '20',
+                              borderColor: workspace.accentColor + '40',
+                              color: 'var(--primary)',
                             }}
                           >
-                            Coming Soon
-                          </span>
-                        )}
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold transition-colors duration-300 group-hover:text-[color:var(--primary)]" style={{ color: 'var(--foreground)' }}>
+                              {workspace.name}
+                            </h3>
+                            <p className="text-xs font-medium" style={{ color: workspace.accentColor }}>
+                              {workspace.tagline}
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Title and tagline */}
-                      <motion.h3
-                        className="mb-1 text-xl font-semibold transition-colors duration-300 group-hover:text-[color:var(--primary)]"
-                        style={{ color: 'var(--foreground)' }}
-                      >
-                        {workspace.name}
-                      </motion.h3>
-                      <p className="mb-4 text-sm font-medium transition-opacity duration-300 group-hover:opacity-80" style={{ color: workspace.accentColor }}>
-                        {workspace.tagline}
-                      </p>
-
-                      {/* Description */}
-                      <p className="mb-6 flex-1 text-sm leading-relaxed" style={{ color: 'var(--neutral-400)' }}>
-                        {workspace.description}
-                      </p>
-
-                      {/* Primary objects */}
-                      <div className="mb-6">
-                        <div className="mb-2 text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                          PRIMARY OBJECTS
+                      {/* What you work with */}
+                      <div className="mb-4">
+                        <div className="mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                          What you work with
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {workspace.primaryObjects.map((obj, idx) => (
-                            <motion.span
+                          {workspace.primaryObjects.map((obj) => (
+                            <span
                               key={obj}
-                              className="rounded-md px-2 py-1 text-xs font-medium transition-all duration-200 hover:scale-105"
+                              className="rounded-md px-2 py-0.5 text-xs font-medium"
                               style={{
                                 background: 'var(--surface-raised)',
                                 color: 'var(--foreground)',
                               }}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: idx * 0.05, duration: 0.2 }}
                             >
                               {obj}
-                            </motion.span>
+                            </span>
                           ))}
                         </div>
                       </div>
 
-                      {/* Example scenarios */}
-                      <div className="mb-6 flex-1">
-                        <div className="mb-2 text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                          EXAMPLE SCENARIOS
+                      {/* Suggested Questions (not "Fixed Queries") */}
+                      <div className="mb-5 flex-1">
+                        <div className="mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                          Suggested questions
                         </div>
-                        <ul className="space-y-1.5">
-                          {workspace.exampleScenarios.slice(0, 3).map((scenario, idx) => (
-                            <motion.li
-                              key={scenario}
-                              className="flex items-start gap-2 text-xs transition-all duration-200 group-hover/item:translate-x-1"
-                              style={{ color: 'var(--neutral-400)' }}
-                              initial={{ opacity: 0, x: -5 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.05, duration: 0.2 }}
+                        <ul className="space-y-2">
+                          {investigations.map((question, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-xs leading-relaxed rounded-lg px-2.5 py-2 transition-colors duration-200"
+                              style={{
+                                color: 'var(--neutral-400)',
+                                background: 'var(--surface-base)',
+                              }}
                             >
-                              <span style={{ color: workspace.accentColor }}>→</span>
-                              <span>{scenario}</span>
-                            </motion.li>
+                              <ChevronRight className="h-3 w-3 shrink-0 mt-0.5" style={{ color: workspace.accentColor }} />
+                              <span>{question}</span>
+                            </li>
                           ))}
                         </ul>
                       </div>
 
-                      {/* Action */}
-                      {isImplemented ? (
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Link
-                            to={WORKSPACE_ROUTES[workspace.id]}
-                            className="group/btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md"
-                            style={{
-                              background: 'var(--surface-raised)',
-                              borderColor: 'var(--border)',
-                              color: 'var(--foreground)',
-                            }}
-                          >
-                            Enter {workspace.name}
-                            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
-                          </Link>
-                        </motion.div>
-                      ) : (
-                        <div
-                          className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium"
+                      {/* Enter button */}
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Link
+                          to={WORKSPACE_ROUTES[workspace.id]}
+                          className="group/btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md"
                           style={{
-                            background: 'var(--surface-base)',
-                            borderColor: 'var(--border-subtle)',
-                            color: 'var(--neutral-500)',
+                            background: 'var(--surface-raised)',
+                            borderColor: 'var(--border)',
+                            color: 'var(--foreground)',
                           }}
                         >
-                          Reserved for future release
-                        </div>
-                      )}
+                          Start {workspace.name}
+                          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
+                        </Link>
+                      </motion.div>
                     </div>
                   </div>
                 </motion.div>
@@ -268,12 +252,10 @@ export function WorkspaceWelcome() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-12 text-center"
+            className="mt-10 text-center"
           >
             <p className="text-sm" style={{ color: 'var(--neutral-500)' }}>
-              Your workspace selection will be remembered during this session.
-              <br />
-              Switch workspaces anytime using the selector in the top navigation.
+              Switch workspaces anytime using the selector in the top navigation bar.
             </p>
           </motion.div>
         </div>

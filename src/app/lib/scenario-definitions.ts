@@ -151,8 +151,8 @@ export interface ScenarioDefinition {
 
 const firmwareRegression: ScenarioDefinition = {
   id: 'firmware-regression',
-  title: 'Firmware Regression Analysis',
-  subtitle: 'Needle in a Haystack — IOP Issue',
+  title: 'Post-Rollout Hidden Regression Detection',
+  subtitle: 'Fleet-wide Risk Discovery',
   description:
     'Correlated connection drops with firmware versions and MAC vendors. Found 45% increase on Firmware v2.1 affecting Broadcom-based devices.',
   loadingStages: [
@@ -172,7 +172,7 @@ const firmwareRegression: ScenarioDefinition = {
   keywords: [
     'firmware', 'connection drop', 'iop', 'broadcom', 'gateway', 'unusual',
     'haystack', 'mac vendor', 'rollback', 'bug report', 'firmware update',
-    '固件', '连接中断', '掉线', '供应商',
+    'firmware cn', 'connection interrupt cn', 'dropout cn', 'vendor cn',
   ],
   blocks: [
     {
@@ -249,7 +249,7 @@ const dpiTrafficAnomalies: ScenarioDefinition = {
   keywords: [
     'dpi', 'traffic', 'streaming', 'gaming', 'tls', 'anomaly', 'classification',
     'europe', 'l7', 'encrypted', 'unknown', 'report', 'pdf',
-    '流量', '异常', '分类', '加密', '报告',
+    'traffic cn', 'anomaly cn', 'classify cn', 'encrypt cn', 'report cn',
   ],
   blocks: [
     {
@@ -306,7 +306,86 @@ const dpiTrafficAnomalies: ScenarioDefinition = {
   ],
 };
 
-// ─── Scenario 3: Proactive Resource Planning ──────────────────────────────
+// ─── Scenario 3: Regional Incident Interpretation ──────────────────────────
+
+const regionalIncident: ScenarioDefinition = {
+  id: 'regional-incident',
+  title: 'Regional Incident Interpretation',
+  subtitle: 'Correlated Outage Analysis',
+  description:
+    'Detected correlated service degradation across 3 PoPs in the South Region. Root cause traced to BGP route flapping affecting 2,400 subscribers.',
+  loadingStages: [
+    'Ingesting incident signals from monitoring system...',
+    'Correlating affected subscribers and devices...',
+    'Analyzing BGP routing tables and PoP health...',
+    'Building incident timeline and impact assessment...',
+  ],
+  confidence: 96,
+  evidenceDomains: ['Incident Management', 'BGP Routing', 'PoP Health', 'Subscriber Impact'],
+  followUps: [
+    'Show me the affected subscriber list',
+    'What is the estimated time to resolution?',
+    'Generate incident report for the NOC team',
+  ],
+  family: 'operations',
+  keywords: [
+    'outage', 'incident', 'region', 'bgp', 'route', 'flapping', 'degradation',
+    'correlated', 'pop', 'impact', 'subscribers affected',
+    'interrupt cn', 'incident cn', 'region cn', 'impact cn', 'route cn',
+  ],
+  blocks: [
+    {
+      type: 'summary',
+      title: 'Incident Root Cause Identified',
+      body: 'Correlated service degradation across Atlanta, Nashville, and Tampa PoPs traced to BGP route flapping on peer AS-65001. The incident started at 14:22 UTC and affects approximately 2,400 subscribers across 3 ISPs in the South Region. Impact manifests as intermittent packet loss (8-15%) and increased latency (45-120ms vs baseline 18ms).',
+    },
+    {
+      type: 'stats',
+      items: [
+        { label: 'Affected Subscribers', value: '2,400', change: 'Across 3 ISPs', trend: 'neutral' },
+        { label: 'Packet Loss', value: '8-15%', change: '+12% above baseline', trend: 'up' },
+        { label: 'Latency Spike', value: '120ms', change: '+102ms vs normal', trend: 'up' },
+        { label: 'PoPs Affected', value: '3 of 12', change: 'South Region only', trend: 'neutral' },
+      ],
+    },
+    {
+      type: 'time-series',
+      title: 'Incident Timeline — Latency Across Affected PoPs',
+      data: [
+        { time: '14:00', a: 18, b: 20, anomaly: undefined },
+        { time: '14:15', a: 22, b: 25, anomaly: undefined },
+        { time: '14:22', a: 85, b: 95, anomaly: 95 },
+        { time: '14:30', a: 110, b: 120, anomaly: 120 },
+        { time: '14:45', a: 75, b: 88, anomaly: undefined },
+        { time: '15:00', a: 55, b: 62, anomaly: undefined },
+        { time: '15:15', a: 45, b: 50, anomaly: undefined },
+      ],
+      legendA: 'Atlanta (ms)',
+      legendB: 'Tampa (ms)',
+      showAnomalies: true,
+    },
+    {
+      type: 'table',
+      title: 'Impact by ISP',
+      columns: ['ISP', 'Subscribers', 'Avg Latency', 'Packet Loss', 'Status'],
+      rows: [
+        ['FastFiber Inc.', '1,120', '125ms', '15%', 'Critical'],
+        ['NetPro Services', '840', '88ms', '9%', 'Degraded'],
+        ['GulfStream Connect', '440', '65ms', '8%', 'Degraded'],
+      ],
+    },
+    {
+      type: 'actions',
+      items: [
+        { label: 'Escalate to NOC', description: 'Route incident to the South Region NOC team for immediate action.', variant: 'primary' },
+        { label: 'Notify Affected ISPs', description: 'Send incident notification to all 3 affected ISP operations teams.', variant: 'outline' },
+        { label: 'Generate Incident Report', description: 'Create a full incident timeline and impact report for post-mortem.', variant: 'outline' },
+      ],
+    },
+  ],
+};
+
+// ─── Scenario 4: Proactive Resource Planning ──────────────────────────────
 
 const resourcePlanning: ScenarioDefinition = {
   id: 'resource-planning',
@@ -331,7 +410,7 @@ const resourcePlanning: ScenarioDefinition = {
   keywords: [
     'forecast', 'cost', 'ingestion', 'resource', 'planning', 'budget', 'growth',
     'device growth', 'predict', 'spend', 'capacity',
-    '预测', '成本', '预算', '增长', '规划',
+    'forecast cn', 'cost cn', 'budget cn', 'growth cn', 'planning cn',
   ],
   blocks: [
     {
@@ -403,7 +482,7 @@ const churnPrevention: ScenarioDefinition = {
   keywords: [
     'churn', 'silent sufferer', 'retention', 'latency', 'streaming', 'gaming',
     'support ticket', 'risk', 'degradation', 'proactive', 'complaint',
-    '流失', '沉默', '延迟', '体验', '风险',
+    'churn cn', 'silent cn', 'latency cn', 'experience cn', 'risk cn',
   ],
   blocks: [
     {
@@ -495,7 +574,7 @@ const bandwidthUpsell: ScenarioDefinition = {
   keywords: [
     'bandwidth', 'upsell', 'saturation', 'video call', '4k', 'streaming',
     'mrr', 'revenue', 'upgrade', 'offer', 'targeted',
-    '带宽', '升级', '饱和', '收入', '推荐',
+    'bandwidth cn', 'upgrade cn', 'saturation cn', 'revenue cn', 'recommendation cn',
   ],
   blocks: [
     {
@@ -575,7 +654,7 @@ const vasDeviceFingerprint: ScenarioDefinition = {
   keywords: [
     'device', 'fingerprint', 'parental control', 'vas', 'gaming console', 'children',
     'upsell', 'subscription', 'household', 'targeting', 'free trial',
-    '设备', '指纹', '家长控制', '增值', '游戏', '儿童',
+    'device cn', 'fingerprint cn', 'parental control cn', 'value-added cn', 'gaming cn', 'children cn',
   ],
   blocks: [
     {
@@ -624,15 +703,146 @@ const vasDeviceFingerprint: ScenarioDefinition = {
   ],
 };
 
+// ─── Scenario 7: Autonomous Wi-Fi Recovery ─────────────────────────────────
+
+const autonomousWifiRecovery: ScenarioDefinition = {
+  id: 'autonomous-wifi-recovery',
+  title: 'Autonomous Wi-Fi Recovery',
+  subtitle: 'Self-Healing Network — Case View',
+  description:
+    'System autonomously detected local Wi-Fi degradation at subscriber location, executed channel optimization, verified recovery, and closed the case — all without human intervention.',
+  loadingStages: [
+    'Detecting Wi-Fi quality degradation at location...',
+    'Running local diagnostic checks...',
+    'Executing autonomous channel optimization...',
+    'Verifying service recovery...',
+    'Closing case with outcome verification...',
+  ],
+  confidence: 98,
+  evidenceDomains: ['Wi-Fi Telemetry', 'Channel Analysis', 'Gateway Diagnostics', 'QoE Metrics'],
+  followUps: [
+    'Show me the recovery timeline in detail',
+    'Has this subscriber had similar issues before?',
+    'View the gateway diagnostic log',
+  ],
+  family: 'operations',
+  keywords: [
+    'wifi', 'recovery', 'self-healing', 'autonomous', 'channel', 'optimization',
+    'local', 'degradation', 'case', 'closed', 'recovery',
+    'recovery cn', 'auto cn', 'optimize cn', 'channel cn', 'self-heal cn',
+  ],
+  blocks: [
+    {
+      type: 'summary',
+      title: 'Autonomous Recovery Complete',
+      body: 'Local Wi-Fi degradation detected at subscriber SUB-7834 (John Smith). System identified channel congestion on Channel 6 (4 neighboring APs detected). Autonomously executed channel migration to Channel 11, verified signal improvement from -72dBm to -48dBm, and confirmed QoE metrics restored to normal. Case auto-closed after 4-minute verification window.',
+    },
+    {
+      type: 'stats',
+      items: [
+        { label: 'Location', value: "John Smith's Home", change: '1428 Beacon Ridge Dr', trend: 'neutral' },
+        { label: 'Issue', value: 'Channel Congestion', change: 'Ch 6 → Ch 11', trend: 'neutral' },
+        { label: 'Signal Improvement', value: '-48 dBm', change: 'From -72 dBm', trend: 'up' },
+        { label: 'Recovery Time', value: '4 min', change: 'Fully automated', trend: 'neutral' },
+      ],
+    },
+    {
+      type: 'table',
+      title: 'Recovery Case Summary',
+      columns: ['Step', 'Action', 'Duration', 'Result'],
+      rows: [
+        ['1. Detection', 'QoE degradation alert', 'Instant', 'RSSI dropped to -72dBm'],
+        ['2. Diagnosis', 'Channel scan + neighbor analysis', '12s', '4 APs on Ch 6 detected'],
+        ['3. Action', 'Channel migration Ch 6 → Ch 11', '8s', 'Signal improved to -48dBm'],
+        ['4. Verification', 'QoE metric confirmation', '3 min', 'All metrics normal'],
+        ['5. Close', 'Auto-close case', 'Instant', 'Case resolved'],
+      ],
+    },
+    {
+      type: 'actions',
+      items: [
+        { label: 'View Full Diagnostic Log', description: 'Open the complete diagnostic timeline for this case.', variant: 'outline' },
+        { label: 'Review Similar Cases', description: 'Check if nearby subscribers are experiencing the same issue.', variant: 'outline' },
+      ],
+    },
+  ],
+};
+
+// ─── Scenario 8: Critical Session Protection ──────────────────────────────
+
+const criticalSessionProtection: ScenarioDefinition = {
+  id: 'critical-session-protection',
+  title: 'Critical Session Protection',
+  subtitle: 'High-Value Moment Safeguard',
+  description:
+    'System detected a high-value video conference session in progress and proactively applied QoS protection when neighboring interference threatened session quality. Session completed without disruption.',
+  loadingStages: [
+    'Monitoring active high-value sessions...',
+    'Detecting interference threat to active session...',
+    'Applying QoS protection policy...',
+    'Verifying session quality maintained...',
+  ],
+  confidence: 97,
+  evidenceDomains: ['Session Monitor', 'QoS Engine', 'Interference Detection', 'Traffic Classifier'],
+  followUps: [
+    'Show the QoS policy applied',
+    'View session quality metrics during protection',
+    'How many sessions were protected this week?',
+  ],
+  family: 'operations',
+  keywords: [
+    'session', 'protection', 'critical', 'qos', 'video', 'conference', 'high-value',
+    'interference', 'safeguard', 'priority', 'real-time',
+    'session cn', 'protection cn', 'critical moment cn', 'priority cn', 'video cn',
+  ],
+  blocks: [
+    {
+      type: 'summary',
+      title: 'Session Protected Successfully',
+      body: 'High-value video conference session detected for subscriber SUB-7834 (John Smith) connected to "Home" gateway. System identified rising interference from a newly activated neighboring AP on Channel 11. Proactively applied QoS traffic prioritization and bandwidth reservation. Session completed 47 minutes with zero quality degradation — mean opinion score maintained at 4.2/5.0 throughout.',
+    },
+    {
+      type: 'stats',
+      items: [
+        { label: 'Protected Session', value: 'Video Conference', change: '47 min duration', trend: 'neutral' },
+        { label: 'Threat Detected', value: 'Interference', change: 'New AP on Ch 11', trend: 'neutral' },
+        { label: 'Protection Status', value: 'Active', change: 'QoS priority applied', trend: 'neutral' },
+        { label: 'Session Quality', value: '4.2/5.0 MOS', change: 'No degradation', trend: 'neutral' },
+      ],
+    },
+    {
+      type: 'table',
+      title: 'Protection Timeline',
+      columns: ['Time', 'Event', 'Action', 'Impact'],
+      rows: [
+        ['14:02', 'Session started', 'Monitoring initiated', 'Normal quality'],
+        ['14:18', 'Interference spike', 'QoS protection activated', 'No user impact'],
+        ['14:35', 'Neighbor AP power increase', 'Bandwidth reserved', 'No user impact'],
+        ['14:49', 'Session completed', 'Protection released', 'MOS 4.2/5.0'],
+      ],
+    },
+    {
+      type: 'actions',
+      items: [
+        { label: 'View QoS Policy Details', description: 'See the exact traffic prioritization rules applied during protection.', variant: 'outline' },
+        { label: 'Protection History', description: 'View all session protection events for this subscriber.', variant: 'outline' },
+      ],
+    },
+  ],
+};
+
 // ─── Export All Scenarios ──────────────────────────────────────────────────
 
 export const ALL_SCENARIOS: ScenarioDefinition[] = [
   firmwareRegression,
   dpiTrafficAnomalies,
+  regionalIncident,
   resourcePlanning,
   churnPrevention,
   bandwidthUpsell,
   vasDeviceFingerprint,
+  autonomousWifiRecovery,
+  criticalSessionProtection,
 ];
 
 export const SCENARIO_MAP = Object.fromEntries(

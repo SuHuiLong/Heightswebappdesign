@@ -1724,37 +1724,37 @@ export function CommandCenter() {
             type: 'topology',
           },
         ]);
-      } else if (userInput.includes('chart') || userInput.includes('history') || userInput.includes('历史') || userInput.includes('bandwidth')) {
+      } else if (userInput.includes('chart') || userInput.includes('history') || userInput.includes('bandwidth')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here is the recent bandwidth usage for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'bandwidth-chart' },
         ]);
-      } else if (userInput.includes('speed test') || userInput.includes('speed') || userInput.includes('测速')) {
+      } else if (userInput.includes('speed test') || userInput.includes('speed')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Running a speed test for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'speed-test' },
         ]);
-      } else if (userInput.includes('outage') || userInput.includes('故障') || userInput.includes('停服') || userInput.includes('down')) {
+      } else if (userInput.includes('outage') || userInput.includes('down')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here are the active outages for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'outage-map' },
         ]);
-      } else if (userInput.includes('plan') || userInput.includes('套餐')) {
+      } else if (userInput.includes('plan')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here is the current service plan for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'service-plan' },
         ]);
-      } else if (userInput.includes('work order') || userInput.includes('ticket') || userInput.includes('工单')) {
+      } else if (userInput.includes('work order') || userInput.includes('ticket')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here are the latest work orders for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'work-order' },
         ]);
-      } else if (userInput.includes('sla') || userInput.includes('uptime') || userInput.includes('可用性')) {
+      } else if (userInput.includes('sla') || userInput.includes('uptime')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here is the current SLA compliance status for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'sla-status' },
         ]);
-      } else if (userInput.includes('provision') || userInput.includes('开通') || userInput.includes('新用户')) {
+      } else if (userInput.includes('provision') || userInput.includes('new user')) {
         setMessages((prev) => [...prev,
           { type: 'ai-text', message: `Here is the provisioning status for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
           { type: 'provisioning' },

@@ -22,11 +22,11 @@ export const router = createBrowserRouter([
       Component: (await import("./pages/workspace-support")).SupportWorkspace,
     }),
   },
-  // Growth Workspace (Placeholder - not implemented)
+  // Growth Workspace
   {
     path: "/growth",
     lazy: async () => ({
-      Component: (await import("./pages/workspace-welcome")).WorkspaceWelcome,
+      Component: (await import("./pages/workspace-growth")).GrowthWorkspace,
     }),
   },
   // Legacy Command Center (kept for reference)

@@ -63,26 +63,43 @@ export function ContextPanel({ scope, activeScenario }: ContextPanelProps) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-2.5 overflow-auto p-2.5">
+      <div className="flex-1 overflow-hidden p-2.5">
         <motion.div
           key={activeScenario?.id ?? scope.level}
           initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18 }}
-          className="space-y-2.5"
+          className="flex h-full flex-col gap-2"
         >
-          {sections.map((sec, sIdx) => (
-            <div key={sIdx}>
-              <h4 className="mb-1.5 text-[11px] font-semibold tracking-[0.08em] text-[color:var(--neutral-500)]">
-                {sec.title}
-              </h4>
-              <div className="space-y-1.5">
-                {sec.items.map((item, iIdx) => (
-                  <ContextCard key={iIdx} item={item} delay={iIdx * 0.03} />
-                ))}
-              </div>
+          {/* REASONING */}
+          <section className="flex min-h-0 flex-shrink-0 flex-col" style={{ flexBasis: '30%' }}>
+            <SectionHeader icon={<Activity className="h-3 w-3" />} title="REASONING" color="var(--primary)" />
+            <div className="flex-1 space-y-1.5 overflow-auto pr-1">
+              {sections[0].items.map((item, iIdx) => (
+                <ContextCard key={iIdx} item={item} delay={iIdx * 0.03} />
+              ))}
             </div>
-          ))}
+          </section>
+
+          {/* BACKEND ACTIONS */}
+          <section className="flex min-h-0 flex-shrink-0 flex-col" style={{ flexBasis: '35%' }}>
+            <SectionHeader icon={<Cpu className="h-3 w-3" />} title="BACKEND ACTIONS" color="var(--warning)" />
+            <div className="flex-1 space-y-1.5 overflow-auto pr-1">
+              {sections[1].items.map((item, iIdx) => (
+                <ContextCard key={iIdx} item={item} delay={iIdx * 0.03} />
+              ))}
+            </div>
+          </section>
+
+          {/* AUDIT LOG */}
+          <section className="flex min-h-0 flex-1 flex-col" style={{ flexBasis: '35%' }}>
+            <SectionHeader icon={<FileText className="h-3 w-3" />} title="AUDIT LOG" color="var(--success)" />
+            <div className="flex-1 space-y-1.5 overflow-auto pr-1">
+              {sections[2].items.map((item, iIdx) => (
+                <ContextCard key={iIdx} item={item} delay={iIdx * 0.03} />
+              ))}
+            </div>
+          </section>
         </motion.div>
       </div>
     </div>
@@ -244,6 +261,16 @@ function StatusDot({ status }: { status?: string }) {
   const color =
     status === 'completed' ? 'var(--success)' : status === 'in-progress' ? 'var(--warning)' : 'var(--neutral-300)';
   return <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: color }} />;
+}
+
+function SectionHeader({ icon, title, color }: { icon: React.ReactNode; title: string; color: string }) {
+  return (
+    <div className="mb-1.5 flex items-center gap-1.5">
+      <span style={{ color }}>{icon}</span>
+      <h4 className="text-[11px] font-semibold tracking-[0.08em]" style={{ color }}>{title}</h4>
+      <div className="ml-1 h-px flex-1" style={{ background: color, opacity: 0.25 }} />
+    </div>
+  );
 }
 
 // ─── Section Builder ────────────────────────────────────────────────────────

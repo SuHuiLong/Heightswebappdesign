@@ -50,11 +50,11 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
   const workspaceItems = [
     { path: '/operations', label: 'Operations', icon: Activity, id: 'operations' },
     { path: '/support', label: 'Support', icon: Users, id: 'support' },
-    { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth', disabled: true },
+    { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth' },
   ];
 
-  // Check if current page should show workspace switcher (operations or support)
-  const isWorkspacePage = location.pathname === '/operations' || location.pathname === '/support';
+  // Check if current page should show workspace switcher
+  const isWorkspacePage = location.pathname === '/operations' || location.pathname === '/support' || location.pathname === '/growth';
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (

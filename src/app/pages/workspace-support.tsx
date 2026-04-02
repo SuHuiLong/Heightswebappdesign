@@ -6,6 +6,9 @@ import { AppLayout } from '../components/app-layout';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { toast } from 'sonner';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
+import { resolveScenario } from '../lib/scenario-resolver';
+import { ScenarioDefinition } from '../lib/scenario-definitions';
+import { WorkspaceSession } from '../components/generative/workspace-session';
 import {
   REGIONS,
   REGION_LABELS,
@@ -41,6 +44,11 @@ interface Ticket {
   subscriberName: string;
   createdAt: string;
   assignedTo?: string;
+  description?: string;
+  identifiedProblem?: string;
+  actionsTaken?: string[];
+  verificationResult?: string;
+  outcome?: string;
 }
 
 interface Subscriber {
@@ -60,6 +68,24 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
+// Support-specific scenario prompts
+const SUPPORT_SCENARIOS = [
+  {
+    id: 'sup-wifi-recovery',
+    title: 'Autonomous Wi-Fi Recovery',
+    description: 'Self-heal Wi-Fi interference by migrating gateway channels automatically',
+    query: 'Detect and resolve Wi-Fi interference on home gateway GW-7834-HOME. The subscriber reports slow speeds on 5GHz. Analyze channel utilization, identify interference sources, and automatically migrate to the optimal channel.',
+    icon: 'wifi',
+  },
+  {
+    id: 'sup-session-protection',
+    title: 'Critical Session Protection',
+    description: 'Protect video call QoS during peak congestion periods',
+    query: 'Protect active video conference sessions for subscriber SUB-1234 during peak congestion. Monitor QoS metrics, prioritize real-time traffic, and ensure minimum MOS score of 4.0.',
+    icon: 'shield',
+  },
+];
+
 // Mock data
 const MOCK_TICKETS: Ticket[] = [
   {
@@ -71,6 +97,14 @@ const MOCK_TICKETS: Ticket[] = [
     subscriberName: 'John Smith',
     createdAt: '2 hours ago',
     assignedTo: 'unassigned',
+    description: 'Subscriber reports intermittent WAN disconnects every 4-8 hours over the past 2 days. Affects all devices in the household.',
+    identifiedProblem: 'Firmware v2.1 regression causing Broadcom chipset instability on WAN interface',
+    actionsTaken: [
+      'Collected 48h connection telemetry from GW-7834-HOME',
+      'Correlated drop pattern with firmware v2.1 rollout on March 18',
+      'Identified 45% increase in disconnects vs baseline',
+    ],
+    verificationResult: 'Pending — awaiting rollback confirmation to firmware v2.0.9',
   },
   {
     id: 'TKT-4820',
@@ -81,6 +115,15 @@ const MOCK_TICKETS: Ticket[] = [
     subscriberName: 'Sarah Johnson',
     createdAt: '5 hours ago',
     assignedTo: 'Mike Chen',
+    description: 'Subscriber reports streaming buffering on 5GHz Wi-Fi. Speed tests show 120 Mbps vs expected 500 Mbps on the Entertainment 500 plan.',
+    identifiedProblem: 'Channel 6 congestion — 8 neighboring APs detected on same channel',
+    actionsTaken: [
+      'Ran spectrum analysis on 5GHz band',
+      'Detected high channel utilization (87%) on Ch36',
+      'Auto-steered client devices to Ch149 (DFS clear)',
+    ],
+    verificationResult: 'Speed test improved to 485 Mbps on 5GHz after channel migration',
+    outcome: 'Resolved — throughput restored to plan limits. Monitoring for 24h stability.',
   },
   {
     id: 'TKT-4819',
@@ -91,6 +134,14 @@ const MOCK_TICKETS: Ticket[] = [
     subscriberName: 'K. Yamamoto',
     createdAt: '1 hour ago',
     assignedTo: 'unassigned',
+    description: 'New installation gateway failed to provision. Device shows online in ACS but configuration push failed after 3 retry attempts.',
+    identifiedProblem: 'Configuration payload rejected — DHCP option 60 mismatch in new firmware',
+    actionsTaken: [
+      'Checked ACS provisioning logs for GW-4521',
+      'Verified configuration template compatibility',
+      'Identified firmware-specific DHCP option mismatch',
+    ],
+    verificationResult: 'Pending — workaround config push scheduled',
   },
 ];
 
@@ -217,17 +268,16 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           prompt: 'Show subscriber list',
         },
         {
-          id: 'all-home-dashboards',
-          title: 'Home dashboards',
-          description: 'Access home network dashboards for troubleshooting.',
-          prompt: '',
-          action: 'open-home-dashboard',
-        },
-        {
           id: 'all-active-cases',
           title: 'Active cases',
           description: 'View currently active support cases.',
           prompt: 'Show active support cases',
+        },
+        {
+          id: 'all-recent-resolved',
+          title: 'Recently resolved',
+          description: 'View tickets resolved in the last 24 hours.',
+          prompt: 'Show recently resolved tickets',
         },
       ];
     case 'region':
@@ -246,10 +296,9 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
         },
         {
           id: 'region-home-dashboards',
-          title: 'Home dashboards',
-          description: 'Access home dashboards in this region.',
-          prompt: '',
-          action: 'open-home-dashboard',
+          title: 'SLA compliance',
+          description: `Check SLA compliance for ${scopeLabel}.`,
+          prompt: `Check SLA compliance for ${scopeLabel}`,
         },
         {
           id: 'region-health',
@@ -274,10 +323,9 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
         },
         {
           id: 'org-home-dashboards',
-          title: 'Home dashboards',
-          description: 'Access home dashboards for this organization.',
-          prompt: '',
-          action: 'open-home-dashboard',
+          title: 'Capacity overview',
+          description: `View capacity and utilization for ${scopeLabel}.`,
+          prompt: `Show capacity overview for ${scopeLabel}`,
         },
         {
           id: 'org-sla',
@@ -963,6 +1011,24 @@ export function SupportWorkspace() {
       { type: 'user', message: query, timestamp: getTimestamp() },
     ]);
 
+    // Try generative scenario first
+    const matchedScenario = resolveScenario(query);
+
+    if (matchedScenario) {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'generative-workspace',
+            scenario: matchedScenario,
+          },
+        ]);
+      }, 300);
+      return;
+    }
+
     setIsTyping(true);
 
     setTimeout(() => {
@@ -1001,6 +1067,24 @@ export function SupportWorkspace() {
             tickets: MOCK_TICKETS,
           },
         ]);
+      } else if (lowerQuery.includes('active') && (lowerQuery.includes('case') || lowerQuery.includes('support'))) {
+        const openTickets = MOCK_TICKETS.filter(t => t.status === 'open' || t.status === 'in-progress');
+        const criticalCount = openTickets.filter(t => t.priority === 'critical').length;
+        const highCount = openTickets.filter(t => t.priority === 'high').length;
+        const unassignedCount = openTickets.filter(t => !t.assignedTo || t.assignedTo === 'unassigned').length;
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'ai-text',
+            message: `Currently tracking ${openTickets.length} active cases across the fleet. ${criticalCount} critical, ${highCount} high priority, ${unassignedCount} unassigned.`,
+            timestamp: getTimestamp(),
+          },
+          {
+            type: 'active-cases',
+            cases: openTickets,
+            summary: { total: openTickets.length, critical: criticalCount, high: highCount, unassigned: unassignedCount },
+          },
+        ]);
       } else if (lowerQuery.includes('subscriber') || lowerQuery.includes('sub-')) {
         const subMatch = query.match(/SUB-\d+/i);
         if (subMatch) {
@@ -1018,6 +1102,19 @@ export function SupportWorkspace() {
             return;
           }
         }
+        // No specific ID — show subscriber list
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'ai-text',
+            message: `I found ${MOCK_SUBSCRIBERS.length} subscribers. Click on one to view details or access their home dashboard.`,
+            timestamp: getTimestamp(),
+          },
+          {
+            type: 'subscriber-list',
+            subscribers: MOCK_SUBSCRIBERS,
+          },
+        ]);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -1032,9 +1129,8 @@ export function SupportWorkspace() {
   };
 
   const handleOpenHomeDashboard = (subscriber?: Subscriber) => {
-    if (subscriber) {
-      setSelectedSubscriber(subscriber);
-    }
+    if (!subscriber) return;
+    setSelectedSubscriber(subscriber);
     setViewMode('home-dashboard');
   };
 
@@ -1189,13 +1285,14 @@ export function SupportWorkspace() {
             initial={{ opacity: 0, y: 14, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.17 }}
-            className="ml-11"
+            className="ml-11 max-w-2xl"
           >
             <div
-              className="rounded-xl border p-4"
+              className="rounded-xl border overflow-hidden"
               style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
                 <div className="flex items-center gap-3">
                   <Ticket className="h-5 w-5" style={{ color: 'var(--primary)' }} />
                   <div>
@@ -1209,20 +1306,24 @@ export function SupportWorkspace() {
                 </div>
                 <div className="flex gap-2">
                   <span
-                    className="text-xs px-2.5 py-1 rounded-lg"
+                    className="text-xs px-2.5 py-1 rounded-lg font-medium"
                     style={{
                       background:
                         ticket.priority === 'critical'
                           ? 'var(--critical)20'
                           : ticket.priority === 'high'
                             ? 'var(--warning)20'
-                            : 'var(--neutral-500)20',
+                            : ticket.priority === 'medium'
+                              ? 'var(--primary)20'
+                              : 'var(--neutral-500)20',
                       color:
                         ticket.priority === 'critical'
                           ? 'var(--critical)'
                           : ticket.priority === 'high'
                             ? 'var(--warning)'
-                            : 'var(--neutral-500)',
+                            : ticket.priority === 'medium'
+                              ? 'var(--primary)'
+                              : 'var(--neutral-500)',
                     }}
                   >
                     {ticket.priority}
@@ -1230,8 +1331,8 @@ export function SupportWorkspace() {
                   <span
                     className="text-xs px-2.5 py-1 rounded-lg"
                     style={{
-                      background: 'var(--surface-raised)',
-                      color: 'var(--neutral-400)',
+                      background: ticket.status === 'resolved' ? 'var(--success)20' : 'var(--surface-raised)',
+                      color: ticket.status === 'resolved' ? 'var(--success)' : 'var(--neutral-400)',
                     }}
                   >
                     {ticket.status}
@@ -1239,25 +1340,104 @@ export function SupportWorkspace() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div>
-                  <span className="text-xs" style={{ color: 'var(--neutral-500)' }}>Subscriber</span>
-                  <div className="font-medium" style={{ color: 'var(--foreground)' }}>
-                    {ticket.subscriberName}
+              {/* Case Summary */}
+              <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                  <div>
+                    <span className="text-xs" style={{ color: 'var(--neutral-500)' }}>Subscriber</span>
+                    <div className="font-medium" style={{ color: 'var(--foreground)' }}>
+                      {ticket.subscriberName}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                      {ticket.subscriberId}
+                    </div>
                   </div>
-                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
-                    {ticket.subscriberId}
+                  <div>
+                    <span className="text-xs" style={{ color: 'var(--neutral-500)' }}>Created</span>
+                    <div className="font-medium" style={{ color: 'var(--foreground)' }}>
+                      {ticket.createdAt}
+                    </div>
+                    {ticket.assignedTo && (
+                      <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                        Assigned to {ticket.assignedTo}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <span className="text-xs" style={{ color: 'var(--neutral-500)' }}>Created</span>
-                  <div className="font-medium" style={{ color: 'var(--foreground)' }}>
-                    {ticket.createdAt}
-                  </div>
-                </div>
+                {ticket.description && (
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--neutral-400)' }}>
+                    {ticket.description}
+                  </p>
+                )}
               </div>
 
-              <div className="flex gap-2">
+              {/* Identified Problem */}
+              {ticket.identifiedProblem && (
+                <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-3.5 w-3.5" style={{ color: 'var(--warning)' }} />
+                    <span className="text-xs font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                      Identified Problem
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                    {ticket.identifiedProblem}
+                  </p>
+                </div>
+              )}
+
+              {/* Actions Taken */}
+              {ticket.actionsTaken && ticket.actionsTaken.length > 0 && (
+                <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-3.5 w-3.5" style={{ color: 'var(--primary)' }} />
+                    <span className="text-xs font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                      Actions Taken
+                    </span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {ticket.actionsTaken.map((action, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--neutral-400)' }}>
+                        <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+                        <span>{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Verification Result */}
+              {ticket.verificationResult && (
+                <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
+                    <span className="text-xs font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                      Verification
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                    {ticket.verificationResult}
+                  </p>
+                </div>
+              )}
+
+              {/* Final Outcome */}
+              {ticket.outcome && (
+                <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)', background: 'var(--success)08' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
+                    <span className="text-xs font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--success)' }}>
+                      Outcome
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                    {ticket.outcome}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="p-4 flex gap-2">
                 <button
                   onClick={() => {
                     const sub = MOCK_SUBSCRIBERS.find(s => s.id === ticket.subscriberId);
@@ -1272,6 +1452,7 @@ export function SupportWorkspace() {
                   View Home Dashboard
                 </button>
                 <button
+                  onClick={() => handleSend(`Run AI diagnostics on ticket ${ticket.id} for subscriber ${ticket.subscriberName}`)}
                   className="px-3 py-2 rounded-lg text-sm font-medium border"
                   style={{
                     background: 'var(--surface-raised)',
@@ -1385,6 +1566,91 @@ export function SupportWorkspace() {
           </motion.div>
         );
 
+      case 'subscriber-list':
+        return (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.17 }}
+            className="ml-11 space-y-2"
+          >
+            {msg.subscribers?.map((sub: Subscriber) => {
+              const statusColor =
+                sub.status === 'online'
+                  ? 'var(--success)'
+                  : sub.status === 'degraded'
+                    ? 'var(--warning)'
+                    : 'var(--critical)';
+              return (
+                <motion.div
+                  key={sub.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border p-4 cursor-pointer hover:scale-[1.01] transition-all"
+                  style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                  onClick={() => {
+                    setSelectedSubscriber(sub);
+                    setMessages((prev) => [
+                      ...prev,
+                      { type: 'user', message: `Show details for ${sub.name}`, timestamp: getTimestamp() },
+                      { type: 'subscriber-found', subscriber: sub, timestamp: getTimestamp() },
+                    ]);
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-8 w-8 items-center justify-center rounded-full"
+                        style={{ background: statusColor + '20' }}
+                      >
+                        <Users className="h-4 w-4" style={{ color: statusColor }} />
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                          {sub.name}
+                        </span>
+                        <span className="text-xs ml-2" style={{ color: 'var(--neutral-400)' }}>
+                          {sub.id}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                          {sub.healthScore}%
+                        </div>
+                        <div className="text-[10px]" style={{ color: 'var(--neutral-500)' }}>Health</div>
+                      </div>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full capitalize"
+                        style={{ background: statusColor + '20', color: statusColor }}
+                      >
+                        {sub.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    <span>{sub.plan}</span>
+                    <span>{sub.gateways} gateways</span>
+                    <span>{sub.devices} devices</span>
+                    <span className="truncate">{sub.address}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        );
+
+      case 'generative-workspace':
+        return (
+          <WorkspaceSession
+            key={idx}
+            scenario={msg.scenario}
+            onFollowUp={(prompt) => handleSend(prompt)}
+          />
+        );
+
       default:
         return null;
     }
@@ -1436,7 +1702,7 @@ export function SupportWorkspace() {
             }}
             onPointerLeave={() => setCursorGlow((prev) => ({ ...prev, active: false }))}
           >
-            {/* Starter Tasks - Fixed at top */}
+            {/* Support Scenarios - Fixed at top */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1447,20 +1713,19 @@ export function SupportWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    STARTER TASKS
+                    SUPPORT SCENARIOS
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {starterTasks.map((task, i) => (
+                  {SUPPORT_SCENARIOS.map((scenario, i) => (
                     <motion.button
-                      key={task.id}
+                      key={scenario.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.08, duration: 0.2 }}
                       onClick={() => {
-                        // Directly send the message without relying on input state
-                        handleSend(task.prompt);
+                        handleSend(scenario.query);
                       }}
                       className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
                       style={{
@@ -1469,10 +1734,10 @@ export function SupportWorkspace() {
                       }}
                     >
                       <div className="text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>
-                        {task.title}
+                        {scenario.title}
                       </div>
                       <div className="text-xs leading-relaxed" style={{ color: 'var(--neutral-400)' }}>
-                        {task.description}
+                        {scenario.description}
                       </div>
                     </motion.button>
                   ))}
@@ -1553,28 +1818,12 @@ export function SupportWorkspace() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, duration: 0.2 }}
                     onClick={() => {
-                      // Hide cards on interaction
-                      setHasInteracted(true);
-
                       if (action.action === 'open-home-dashboard') {
-                        handleOpenHomeDashboard();
+                        const subscriberId = currentScope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
+                        const sub = MOCK_SUBSCRIBERS.find(s => s.id === subscriberId);
+                        handleOpenHomeDashboard(sub);
                       } else if (action.prompt) {
-                        setMessages((prev) => [
-                          ...prev,
-                          { type: 'user', message: action.prompt, timestamp: getTimestamp() },
-                        ]);
-                        setIsTyping(true);
-                        setTimeout(() => {
-                          setIsTyping(false);
-                          setMessages((prev) => [
-                            ...prev,
-                            {
-                              type: 'ai-text',
-                              message: `I've analyzed the request for "${action.prompt}". Here's what I found.`,
-                              timestamp: getTimestamp(),
-                            },
-                          ]);
-                        }, 1500);
+                        handleSend(action.prompt);
                       }
                     }}
                     className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"
@@ -1824,28 +2073,12 @@ export function SupportWorkspace() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06, duration: 0.2 }}
                       onClick={() => {
-                        // Hide cards on interaction
-                        setHasInteracted(true);
-
                         if (action.action === 'open-home-dashboard') {
-                          handleOpenHomeDashboard();
+                          const subscriberId = currentScope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
+                          const sub = MOCK_SUBSCRIBERS.find(s => s.id === subscriberId);
+                          handleOpenHomeDashboard(sub);
                         } else if (action.prompt) {
-                          setMessages((prev) => [
-                            ...prev,
-                            { type: 'user', message: action.prompt, timestamp: getTimestamp() },
-                          ]);
-                          setIsTyping(true);
-                          setTimeout(() => {
-                            setIsTyping(false);
-                            setMessages((prev) => [
-                              ...prev,
-                              {
-                                type: 'ai-text',
-                                message: `I've analyzed the request for "${action.prompt}". Here's what I found.`,
-                                timestamp: getTimestamp(),
-                              },
-                            ]);
-                          }, 1500);
+                          handleSend(action.prompt);
                         }
                       }}
                       className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"

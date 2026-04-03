@@ -6,6 +6,14 @@
  * based on natural-language user intent.
  */
 
+import type {
+  AuditEntry,
+  BackendAction,
+  ReasoningStep,
+  WorkbenchCapabilityStage,
+  WorkbenchCurrentQuestion,
+} from './workbench-model';
+
 // ─── Block Types ──────────────────────────────────────────────────────────
 
 export type BlockType =
@@ -145,6 +153,16 @@ export interface ScenarioDefinition {
   keywords: string[];
   /** Rendered content blocks */
   blocks: ScenarioBlock[];
+  /** Optional metadata for the prompt-first workbench */
+  workbench?: {
+    currentQuestion: Omit<WorkbenchCurrentQuestion, 'title' | 'scopeLabel'>;
+    capabilityChain: WorkbenchCapabilityStage[];
+    processRail: {
+      reasoning: ReasoningStep[];
+      backendActions: BackendAction[];
+      auditEntries: AuditEntry[];
+    };
+  };
 }
 
 // ─── Scenario 1: Needle in a Haystack (IOP Issue) ────────────────────────
@@ -222,6 +240,43 @@ const firmwareRegression: ScenarioDefinition = {
       ],
     },
   ],
+  workbench: {
+    capabilityChain: [
+      {
+        title: 'Device Signals',
+        detail: 'Gateways on firmware v2.1 show repeated WAN disconnects and vendor clustering.',
+      },
+      {
+        title: 'Cloud Checks',
+        detail: 'Fleet analytics correlates the rollout date, firmware cohort, and ticket history.',
+      },
+      {
+        title: 'Agent Reasoning / Actions',
+        detail: 'The agent isolates the regression pattern and recommends rollback plus escalation.',
+      },
+    ],
+    processRail: {
+      reasoning: [
+        {
+          title: 'Rollout correlation found',
+          detail: 'Disconnect frequency rises immediately after the v2.1 deployment window.',
+        },
+      ],
+      backendActions: [
+        {
+          title: 'Firmware cohort comparison',
+          system: 'Fleet Analytics',
+          outcome: 'v2.1 devices show a materially higher drop rate than stable cohorts.',
+        },
+      ],
+      auditEntries: [
+        {
+          title: 'Regression candidate recorded',
+          detail: 'Broadcom-heavy firmware v2.1 cohort flagged for incident follow-up.',
+        },
+      ],
+    },
+  },
 };
 
 // ─── Scenario 2: DPI & Traffic Anomalies ──────────────────────────────────
@@ -455,6 +510,43 @@ const resourcePlanning: ScenarioDefinition = {
       ],
     },
   ],
+  workbench: {
+    capabilityChain: [
+      {
+        title: 'Device Signals',
+        detail: 'Device registry growth and current ingestion volume establish the planning baseline.',
+      },
+      {
+        title: 'Cloud Checks',
+        detail: 'Cost services run forecast simulations with budget thresholds and confidence bounds.',
+      },
+      {
+        title: 'Agent Reasoning / Actions',
+        detail: 'The agent frames spend risk and proposes alerting or scenario changes.',
+      },
+    ],
+    processRail: {
+      reasoning: [
+        {
+          title: 'Growth assumption applied',
+          detail: 'The model projects spend under a 15% increase in managed devices.',
+        },
+      ],
+      backendActions: [
+        {
+          title: 'Forecast simulation',
+          system: 'Cost Model',
+          outcome: 'Monte Carlo forecasting produces projected spend and upper/lower bounds.',
+        },
+      ],
+      auditEntries: [
+        {
+          title: 'Forecast snapshot saved',
+          detail: 'Current planning recommendation stored with the 15% growth scenario.',
+        },
+      ],
+    },
+  },
 };
 
 // ─── Scenario 4: Proactive Churn Prevention ───────────────────────────────
@@ -829,6 +921,47 @@ const criticalSessionProtection: ScenarioDefinition = {
       ],
     },
   ],
+  workbench: {
+    capabilityChain: [
+      {
+        title: 'Device Signals',
+        detail: 'Session telemetry and local Wi-Fi interference indicate a live video conference at risk.',
+      },
+      {
+        title: 'Cloud Checks',
+        detail: 'Policy services validate subscriber priority, classifier confidence, and QoS eligibility.',
+      },
+      {
+        title: 'Agent Reasoning / Actions',
+        detail: 'The agent decides to protect the session, reserves bandwidth, and verifies quality hold.',
+      },
+    ],
+    processRail: {
+      reasoning: [
+        {
+          title: 'High-value session detected',
+          detail: 'The active query maps to a protected video conference already in progress.',
+        },
+        {
+          title: 'Interference risk confirmed',
+          detail: 'A neighboring AP activation threatens quality during peak congestion.',
+        },
+      ],
+      backendActions: [
+        {
+          title: 'QoS protection applied',
+          system: 'QoS Engine',
+          outcome: 'Priority traffic handling and bandwidth reservation are activated for the session.',
+        },
+      ],
+      auditEntries: [
+        {
+          title: 'Protection event logged',
+          detail: 'Session safeguard activation and verification outcome recorded for subscriber review.',
+        },
+      ],
+    },
+  },
 };
 
 // ─── Export All Scenarios ──────────────────────────────────────────────────
@@ -848,3 +981,5 @@ export const ALL_SCENARIOS: ScenarioDefinition[] = [
 export const SCENARIO_MAP = Object.fromEntries(
   ALL_SCENARIOS.map((s) => [s.id, s]),
 ) as Record<string, ScenarioDefinition>;
+
+export const SCENARIO_REGISTRY = SCENARIO_MAP;

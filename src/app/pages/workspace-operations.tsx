@@ -4,6 +4,7 @@ import { Activity, Search, Send, Sparkles, Users, Zap, Check } from 'lucide-reac
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
 import { AppLayout } from '../components/app-layout';
+import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { toast } from 'sonner';
 import { resolveScenario } from '../lib/scenario-resolver';
@@ -458,7 +459,7 @@ function getRootScopeCommandOptions(currentScope: ScopeSelection): ScopeCommandO
   return [
     {
       id: 'scope-all',
-      label: 'All Tenants',
+      label: 'All (Fleet)',
       description: 'Reset to the global fleet scope.',
       commandLabel: '/all',
       scope: { level: 'all' },
@@ -1405,108 +1406,11 @@ export function OperationsWorkspace() {
           </div>
         </main>
 
-        {/* Right Panel - Context */}
-        <aside className="hidden xl:block w-72 border-l overflow-auto" style={{ borderColor: 'var(--border)', background: 'var(--surface-base)' }}>
-          <div className="p-4">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
-              Operations Context
-            </h3>
-
-            <div className="space-y-4">
-              {/* Workspace Info */}
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  WORKSPACE
-                </div>
-                <div className="text-sm" style={{ color: 'var(--foreground)' }}>
-                  {WORKSPACES.operations.name}
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--neutral-400)' }}>
-                  {WORKSPACES.operations.tagline}
-                </div>
-              </div>
-
-              {/* Current Scope */}
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  CURRENT SCOPE
-                </div>
-                <div className="text-sm" style={{ color: 'var(--foreground)' }}>
-                  {(() => {
-                    switch (currentScope.level) {
-                      case 'all': return 'All Tenants (Fleet)';
-                      case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'Region';
-                      case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'Organization';
-                      case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'Subscriber';
-                      case 'device': return 'Gateway Device';
-                      default: return 'Unknown';
-                    }
-                  })()}
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--neutral-400)' }}>
-                  Type / to change
-                </div>
-              </div>
-
-              {/* Capabilities */}
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  CAPABILITIES
-                </div>
-                <ul className="space-y-1">
-                  {workspaceContext.capabilities.map((cap) => (
-                    <li key={cap} className="text-xs flex items-center gap-2" style={{ color: 'var(--neutral-400)' }}>
-                      <span className="h-1 w-1 rounded-full" style={{ background: 'var(--primary)' }} />
-                      {cap}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Scope Actions */}
-              <div className="pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-                <div className="mb-3 flex items-center gap-2">
-                  <Activity className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
-                  <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                    {(() => {
-                      switch (currentScope.level) {
-                        case 'all': return 'ALL TENANTS (FLEET)';
-                        case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'REGION';
-                        case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'ORGANIZATION';
-                        case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'SUBSCRIBER';
-                        case 'device': return 'GATEWAY DEVICE';
-                        default: return 'UNKNOWN';
-                      }
-                    })()}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {currentScopeActions.map((action, i) => (
-                    <motion.button
-                      key={action.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.06, duration: 0.2 }}
-                      onClick={() => handleGenerativePrompt(action.prompt)}
-                      className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"
-                      style={{
-                        background: 'var(--surface-raised)',
-                        borderColor: 'var(--border)',
-                      }}
-                    >
-                      <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-                        {action.title}
-                      </div>
-                      <div className="text-[10px] leading-relaxed mt-1" style={{ color: 'var(--neutral-400)' }}>
-                        {action.description}
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
+        {/* Right Panel - Reasoning / Actions / Audit */}
+        <WorkspaceRightPanel
+          workspaceId="operations"
+          isActive={isTyping}
+        />
       </div>
     </AppLayout>
   );

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { ChevronDown, Activity, FileText, Settings as SettingsIcon, Search, Menu, X, Users, TrendingUp } from 'lucide-react';
+import { Activity, FileText, Settings as SettingsIcon, Search, Menu, X, Users, TrendingUp, LogOut, User } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelector, ScopeSelection } from './scope-selector';
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 
@@ -59,110 +60,142 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (
         <div
-          className="relative flex h-12 items-center gap-2 border-b px-3"
+          className="relative flex flex-col border-b"
           style={{
             borderColor: 'var(--border)',
             background: 'var(--surface-base)',
           }}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 lg:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          {/* Row 1: Brand (left) + Search (center) + User info (right) */}
+          <div className="flex h-11 items-center gap-3 px-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 lg:hidden"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
 
-          {/* Heights Logo */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'var(--primary)' }}>
-              <span className="text-base font-bold text-white">H</span>
-            </div>
-            <span className="hidden sm:inline text-base font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
-              Heights
-            </span>
-          </div>
-
-          <div className="h-6 w-px" style={{ background: 'var(--border-subtle)' }} />
-
-          {/* Workspace switcher buttons - Only show on workspace pages */}
-          {isWorkspacePage && (
-            <>
+              {/* Heights Brand Logo */}
               <div className="flex items-center gap-2">
-                {workspaceItems.map((ws) => {
-                  const Icon = ws.icon;
-                  const isActive = location.pathname === ws.path;
-                  return (
-                    <Link
-                      key={ws.path}
-                      to={ws.path}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        ws.disabled ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      style={{
-                        background: isActive && !ws.disabled ? 'var(--surface-raised)' : 'transparent',
-                        color: isActive && !ws.disabled ? 'var(--foreground)' : 'var(--neutral-400)',
-                        border: isActive && !ws.disabled ? '1px solid var(--border)' : '1px solid transparent',
-                      }}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{ws.label}</span>
-                    </Link>
-                  );
-                })}
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: 'var(--primary)' }}>
+                  <span className="text-sm font-bold text-white">H</span>
+                </div>
+                <span className="hidden sm:inline text-sm font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+                  Heights Telecom
+                </span>
               </div>
+            </div>
 
-              <div className="h-6 w-px" style={{ background: 'var(--border-subtle)' }} />
-            </>
-          )}
-
-          {isWorkspacePage ? (
-            <>
-              <div className="flex-1"></div>
-
-              <div className="hidden max-w-sm md:block">
-                <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors" style={{ color: 'var(--neutral-400)' }} />
+            {/* Search - Centered */}
+            {isWorkspacePage && (
+              <div className="flex-1 flex justify-center">
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
                   <input
                     type="text"
                     placeholder="Search subscribers, devices, events..."
-                    className="h-8 w-full rounded-lg border pl-8 pr-3 text-sm transition-all"
+                    className="h-8 w-full rounded-lg border pl-9 pr-3 text-sm transition-all"
                     style={{
                       borderColor: 'var(--border)',
                       borderRadius: 'var(--radius-control)',
                       background: 'var(--surface-raised)',
-                      boxShadow: 'var(--shadow-xs)',
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = 'var(--primary)';
-                      e.target.style.boxShadow = '0 0 0 4px var(--focus-ring)';
+                      e.target.style.boxShadow = '0 0 0 3px var(--focus-ring)';
                     }}
                     onBlur={(e) => {
                       e.target.style.borderColor = 'var(--border)';
-                      e.target.style.boxShadow = 'var(--shadow-xs)';
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
               </div>
+            )}
+            {!isWorkspacePage && <div className="flex-1" />}
 
-              <div className="h-6 w-px hidden md:block" style={{ background: 'var(--border-subtle)' }} />
+            {/* User Info */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors cursor-pointer shrink-0"
+                  style={{ color: 'var(--neutral-500)' }}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline text-xs">ops-admin@acme.com</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>ops-admin@acme.com</p>
+                  <p className="text-xs" style={{ color: 'var(--neutral-500)' }}>Operations Admin</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <SettingsIcon className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-              <div className="flex items-center gap-1.5 text-sm">
-                <ScopeSelector
-                  value={currentScope}
-                  onChange={handleScopeChange}
-                  compact={isMobile}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="flex-1">
-              <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
-                {navItems.find(item => item.path === location.pathname)?.label || 'Heights'}
-              </h1>
-            </div>
-          )}
+          {/* Row 2: Customer Hierarchy (left) + Workspace (right) */}
+          <div
+            className="flex h-10 items-center justify-between gap-3 border-t px-3"
+            style={{ borderColor: 'var(--border-subtle)' }}
+          >
+            {isWorkspacePage ? (
+              <>
+                {/* Left: Customer Hierarchy Breadcrumb */}
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <ScopeSelector
+                    value={currentScope}
+                    onChange={handleScopeChange}
+                    compact={isMobile}
+                  />
+                </div>
+
+                {/* Right: Workspace Tabs */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {workspaceItems.map((ws) => {
+                    const Icon = ws.icon;
+                    const isActive = location.pathname === ws.path;
+                    return (
+                      <Link
+                        key={ws.path}
+                        to={ws.path}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer"
+                        style={{
+                          background: isActive ? 'var(--surface-raised)' : 'transparent',
+                          color: isActive ? 'var(--foreground)' : 'var(--neutral-400)',
+                          border: isActive ? '1px solid var(--border)' : '1px solid transparent',
+                        }}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="hidden lg:inline">{ws.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex-1">
+                  <h1 className="text-sm font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+                    {navItems.find(item => item.path === location.pathname)?.label || 'Heights'}
+                  </h1>
+                </div>
+                <div />
+              </>
+            )}
+          </div>
         </div>
       )}
 

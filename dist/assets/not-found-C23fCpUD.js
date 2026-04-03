@@ -1,1 +1,0 @@
-import{j as e}from"./vendor-DL8Blzb2.js";function s(){return e.jsx("div",{className:"flex items-center justify-center h-screen",children:e.jsxs("div",{className:"text-center",children:[e.jsx("h1",{className:"text-4xl mb-2",children:"404"}),e.jsx("p",{className:"text-neutral-500",children:"Page not found"})]})})}export{s as NotFound};

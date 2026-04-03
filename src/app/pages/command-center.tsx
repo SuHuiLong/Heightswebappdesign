@@ -251,7 +251,7 @@ function getRootScopeCommandOptions(currentScope: ScopeSelection): ScopeCommandO
   return [
     {
       id: 'scope-all',
-      label: 'All Tenants',
+      label: 'All (Fleet)',
       description: 'Reset to the global fleet scope.',
       commandLabel: '/all',
       scope: { level: 'all' },
@@ -758,7 +758,7 @@ function getScopedReceipt(scope: ScopeSelection) {
         details: [
           { label: 'Target', value: 'GW-4521-A' },
           { label: 'Duration', value: '45 seconds' },
-          { label: 'Scope', value: 'All Tenants' },
+          { label: 'Scope', value: 'All (Fleet)' },
         ],
         source: 'Fleet Automation Engine',
       };

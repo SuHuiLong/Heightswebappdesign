@@ -1,10 +1,9 @@
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { Activity, Users, TrendingUp, ArrowRight, ChevronRight, Sparkles } from 'lucide-react';
-import { WORKSPACES, WORKSPACE_STARTER_TASKS } from '../lib/workspace-definitions';
+import { WORKSPACES } from '../lib/workspace-definitions';
 import { useReducedMotion } from 'motion/react';
 
-// Suggested investigations shown as "Suggested Questions" on each card
 const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
   operations: [
     'Find gateways with connection drops correlated to firmware versions',
@@ -20,22 +19,11 @@ const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
   ],
 };
 
-const WORKSPACE_ROUTES = {
-  operations: '/operations',
-  support: '/support',
-  growth: '/growth',
+const WORKSPACE_CONFIG = {
+  operations: { route: '/operations', icon: Activity },
+  support: { route: '/support', icon: Users },
+  growth: { route: '/growth', icon: TrendingUp },
 } as const;
-
-function getWorkspaceIcon(id: keyof typeof WORKSPACES) {
-  switch (id) {
-    case 'operations':
-      return Activity;
-    case 'support':
-      return Users;
-    case 'growth':
-      return TrendingUp;
-  }
-}
 
 export function WorkspaceWelcome() {
   const shouldReduceMotion = useReducedMotion();
@@ -107,15 +95,14 @@ export function WorkspaceWelcome() {
               </h2>
             </div>
             <p className="max-w-2xl mx-auto text-base" style={{ color: 'var(--neutral-400)' }}>
-              Each workspace is a focused environment for a specific type of work.
-              Ask a question, and the system will organize results around it.
+              Each workspace is focused on a specific type of work. Ask a question and the system will organize results around it.
             </p>
           </motion.div>
 
           {/* Workspace cards */}
           <div className="grid gap-6 lg:grid-cols-3">
             {(Object.values(WORKSPACES) as const).map((workspace, index) => {
-              const Icon = getWorkspaceIcon(workspace.id);
+              const { icon: Icon, route } = WORKSPACE_CONFIG[workspace.id];
               const investigations = SUGGESTED_INVESTIGATIONS[workspace.id];
 
               return (
@@ -228,7 +215,7 @@ export function WorkspaceWelcome() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <Link
-                          to={WORKSPACE_ROUTES[workspace.id]}
+                          to={route}
                           className="group/btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md"
                           style={{
                             background: 'var(--surface-raised)',

@@ -1,0 +1,135 @@
+<h2>Prompt-First Workbench Directions</h2>
+<p class="subtitle">Compare how the prompt bar, generated result surface, and the device/cloud/agent capability chain should be arranged.</p>
+
+<div class="section" style="margin-bottom:16px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:rgba(255,255,255,0.03);">
+  <div class="label">Recommendation</div>
+  <div style="font-size:14px;line-height:1.5;">
+    <strong>Option A</strong> is my recommendation. It makes the current question the visual anchor, exposes the system chain in the main canvas, and still leaves enough room for generated results plus the fixed reasoning / backend / audit rail.
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option A · Analyst Canvas</div>
+        <div class="mockup-body" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="height:38px;border:1px solid rgba(255,255,255,0.12);border-radius:10px;background:rgba(83,174,255,0.12);display:flex;align-items:center;padding:0 12px;font-size:12px;">
+            Current question / prompt bar stays pinned
+          </div>
+          <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:10px;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="height:76px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);padding:10px;">
+                <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;">Question framing</div>
+                <div style="margin-top:8px;height:8px;width:80%;background:rgba(255,255,255,0.65);border-radius:999px;"></div>
+                <div style="margin-top:8px;height:8px;width:56%;background:rgba(255,255,255,0.24);border-radius:999px;"></div>
+              </div>
+              <div style="height:88px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(72,214,189,0.08);padding:10px;">
+                <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;">Device Signals → Cloud Checks → Agent Actions</div>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                  <div style="flex:1;height:42px;border-radius:10px;background:rgba(255,255,255,0.08);"></div>
+                  <div style="flex:1;height:42px;border-radius:10px;background:rgba(255,255,255,0.08);"></div>
+                  <div style="flex:1;height:42px;border-radius:10px;background:rgba(255,255,255,0.08);"></div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="height:112px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+                <div style="height:112px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+              </div>
+            </div>
+            <div style="height:296px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);padding:10px;">
+              <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;">Right rail</div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">
+                <div style="height:74px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+                <div style="height:74px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+                <div style="height:74px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Analyst Canvas</h3>
+      <p>Best balance. The prompt stays dominant, the system capability chain is visible in the main canvas, and generated result blocks still feel query-specific rather than dashboard-like.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option B · Mission Board</div>
+        <div class="mockup-body" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="height:40px;border:1px solid rgba(255,255,255,0.12);border-radius:10px;background:rgba(255,189,89,0.12);display:flex;align-items:center;padding:0 12px;font-size:12px;">
+            Pinned prompt bar + generated scope
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div style="height:70px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);"></div>
+            <div style="height:70px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);"></div>
+            <div style="height:70px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.3fr 0.7fr;gap:10px;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="height:112px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+              <div style="height:112px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+            </div>
+            <div style="height:234px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Mission Board</h3>
+      <p>More structured and executive-friendly. The capability chain becomes a top strip, but the page risks reading like a polished dashboard instead of a generated investigation surface.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option C · Investigative Deck</div>
+        <div class="mockup-body" style="display:grid;grid-template-columns:0.65fr 1.15fr 0.7fr;gap:10px;">
+          <div style="height:312px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);padding:10px;">
+            <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;">Prompt history</div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+              <div style="height:42px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+              <div style="height:42px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+              <div style="height:42px;border-radius:10px;background:rgba(255,255,255,0.06);"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="height:38px;border-radius:10px;background:rgba(83,174,255,0.12);border:1px solid rgba(255,255,255,0.12);"></div>
+            <div style="height:78px;border-radius:12px;background:rgba(72,214,189,0.08);border:1px solid rgba(255,255,255,0.12);"></div>
+            <div style="height:176px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+          </div>
+          <div style="height:312px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Investigative Deck</h3>
+      <p>Strongest conversation feel. Good for iterative prompting, but the left prompt-history rail consumes width and weakens the “system capability” story on first glance.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>What to compare</h4>
+      <ul>
+        <li>Does the current question stay visually dominant?</li>
+        <li>Can you understand the device / cloud / agent chain at a glance?</li>
+        <li>Does the result area feel generated from the prompt, not like a fixed dashboard?</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Known risk</h4>
+      <ul>
+        <li>Too much chrome at the top makes it look like an observability console.</li>
+        <li>Too much history on the left weakens the result surface.</li>
+        <li>If the right rail becomes the only process view, the system capability story stays hidden.</li>
+      </ul>
+    </div>
+  </div>
+</div>

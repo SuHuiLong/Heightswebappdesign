@@ -140,7 +140,7 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
                     <>
                       {(value.region || value.level === 'all') ? <MapPin className="h-3.5 w-3.5 shrink-0" /> : null}
                       <span className={compact ? 'max-w-[120px] truncate' : ''}>
-                        {value.region ? REGIONS.find(r => r.id === value.region)?.name : value.level === 'all' ? 'All Tenants (Fleet)' : 'Select Region'}
+                        {value.region ? REGIONS.find(r => r.id === value.region)?.name : value.level === 'all' ? 'All (Fleet)' : 'Region'}
                       </span>
                       <ChevronDown className="h-3 w-3" />
                     </>
@@ -203,7 +203,7 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
                     <span className={compact ? 'max-w-[120px] truncate' : ''}>
                       {value.organization
                         ? availableOrganizations.find(o => o.id === value.organization)?.name
-                        : 'Select Org'}
+                        : 'ISP'}
                     </span>
                     <ChevronDown className="h-3 w-3" />
                   </>
@@ -260,7 +260,7 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
                       <span className={compact ? 'max-w-[120px] truncate' : ''}>
                         {value.subscriber
                           ? availableSubscribers.find(s => s.id === value.subscriber)?.name
-                          : 'Select Sub'}
+                          : 'Subscriber'}
                       </span>
                       <ChevronDown className="h-3 w-3" />
                     </>
@@ -322,7 +322,7 @@ export function ScopeSelector({ value, onChange, compact = false }: ScopeSelecto
                       <span className={compact ? 'max-w-[120px] truncate' : ''}>
                         {value.device
                           ? availableDevices.find((device) => device.id === value.device)?.name
-                          : 'Select Device'}
+                          : 'Home / Office'}
                       </span>
                       <ChevronDown className="h-3 w-3" />
                     </>

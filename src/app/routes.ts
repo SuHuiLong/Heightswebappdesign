@@ -8,6 +8,13 @@ export const router = createBrowserRouter([
       Component: (await import("./pages/workspace-welcome")).WorkspaceWelcome,
     }),
   },
+  // Fleet Overview Dashboard
+  {
+    path: "/fleet",
+    lazy: async () => ({
+      Component: (await import("./pages/fleet-overview")).FleetOverview,
+    }),
+  },
   // Operations Workspace
   {
     path: "/operations",

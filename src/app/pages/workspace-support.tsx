@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Users, Search, Send, Sparkles, Home, Ticket, Clock, AlertTriangle, CheckCircle, XCircle, Wifi, Router, Activity, Check } from 'lucide-react';
+import { Users, Search, Send, Sparkles, Home, Ticket, Clock, AlertTriangle, CheckCircle, XCircle, Wifi, Router, Activity, Check, Bot, UserCheck, Zap } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { AppLayout } from '../components/app-layout';
+import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { toast } from 'sonner';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
@@ -40,6 +41,12 @@ interface Ticket {
   title: string;
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  /** How this ticket was resolved:
+   *  - 'autonomous': AI self-discovered and self-resolved the issue
+   *  - 'ai-assisted': User-initiated, AI accelerated resolution, but human support finalized it
+   *  - 'ai-resolved': User-initiated, AI fully resolved without human intervention
+   */
+  resolutionType?: 'autonomous' | 'ai-assisted' | 'ai-resolved';
   subscriberId: string;
   subscriberName: string;
   createdAt: string;
@@ -73,16 +80,34 @@ const SUPPORT_SCENARIOS = [
   {
     id: 'sup-wifi-recovery',
     title: 'Autonomous Wi-Fi Recovery',
-    description: 'Self-heal Wi-Fi interference by migrating gateway channels automatically',
+    description: 'AI self-discovered and self-resolved Wi-Fi interference — no human intervention',
     query: 'Detect and resolve Wi-Fi interference on home gateway GW-7834-HOME. The subscriber reports slow speeds on 5GHz. Analyze channel utilization, identify interference sources, and automatically migrate to the optimal channel.',
     icon: 'wifi',
+    resolutionType: 'autonomous' as const,
   },
   {
     id: 'sup-session-protection',
     title: 'Critical Session Protection',
-    description: 'Protect video call QoS during peak congestion periods',
+    description: 'AI autonomously protected an active video call from interference',
     query: 'Protect active video conference sessions for subscriber SUB-1234 during peak congestion. Monitor QoS metrics, prioritize real-time traffic, and ensure minimum MOS score of 4.0.',
     icon: 'shield',
+    resolutionType: 'autonomous' as const,
+  },
+  {
+    id: 'sup-firmware-investigation',
+    title: 'Firmware Regression Investigation',
+    description: 'AI accelerated root-cause analysis, support engineer executes rollback',
+    query: 'Investigate intermittent connection drops on subscriber SUB-1234 (John Smith). Collect telemetry, correlate with firmware versions, and identify root cause.',
+    icon: 'activity',
+    resolutionType: 'ai-assisted' as const,
+  },
+  {
+    id: 'sub-channel-fix',
+    title: 'User-Reported Slow Speed',
+    description: 'User reported buffering — AI fully diagnosed and resolved autonomously',
+    query: 'Fix slow 5GHz speeds for subscriber Sarah Johnson (SUB-1190). Speed tests show 120 Mbps vs expected 500 Mbps.',
+    icon: 'wifi',
+    resolutionType: 'ai-resolved' as const,
   },
 ];
 
@@ -91,57 +116,108 @@ const MOCK_TICKETS: Ticket[] = [
   {
     id: 'TKT-4821',
     title: 'Intermittent connection drops',
-    status: 'open',
+    status: 'in-progress',
     priority: 'high',
+    resolutionType: 'ai-assisted',
     subscriberId: 'SUB-1234',
     subscriberName: 'John Smith',
     createdAt: '2 hours ago',
-    assignedTo: 'unassigned',
+    assignedTo: 'Mike Chen',
     description: 'Subscriber reports intermittent WAN disconnects every 4-8 hours over the past 2 days. Affects all devices in the household.',
     identifiedProblem: 'Firmware v2.1 regression causing Broadcom chipset instability on WAN interface',
     actionsTaken: [
-      'Collected 48h connection telemetry from GW-7834-HOME',
-      'Correlated drop pattern with firmware v2.1 rollout on March 18',
-      'Identified 45% increase in disconnects vs baseline',
+      'AI collected 48h connection telemetry from GW-7834-HOME',
+      'AI correlated drop pattern with firmware v2.1 rollout on March 18',
+      'AI identified 45% increase in disconnects vs baseline',
+      'Support engineer verified root cause and initiated rollback',
     ],
     verificationResult: 'Pending — awaiting rollback confirmation to firmware v2.0.9',
+    outcome: 'AI accelerated diagnosis (reduced from 4h to 15min). Support engineer is executing staged firmware rollback.',
   },
   {
     id: 'TKT-4820',
     title: 'Slow speeds on 5GHz band',
-    status: 'in-progress',
+    status: 'resolved',
     priority: 'medium',
+    resolutionType: 'ai-resolved',
     subscriberId: 'SUB-1190',
     subscriberName: 'Sarah Johnson',
     createdAt: '5 hours ago',
-    assignedTo: 'Mike Chen',
+    assignedTo: 'AI Agent',
     description: 'Subscriber reports streaming buffering on 5GHz Wi-Fi. Speed tests show 120 Mbps vs expected 500 Mbps on the Entertainment 500 plan.',
-    identifiedProblem: 'Channel 6 congestion — 8 neighboring APs detected on same channel',
+    identifiedProblem: 'Channel 36 congestion — 8 neighboring APs detected on same channel',
     actionsTaken: [
-      'Ran spectrum analysis on 5GHz band',
-      'Detected high channel utilization (87%) on Ch36',
-      'Auto-steered client devices to Ch149 (DFS clear)',
+      'AI ran spectrum analysis on 5GHz band',
+      'AI detected high channel utilization (87%) on Ch36',
+      'AI auto-steered client devices to Ch149 (DFS clear)',
+      'AI verified speed test improved to 485 Mbps',
     ],
     verificationResult: 'Speed test improved to 485 Mbps on 5GHz after channel migration',
-    outcome: 'Resolved — throughput restored to plan limits. Monitoring for 24h stability.',
+    outcome: 'Fully resolved by AI — throughput restored to plan limits. 24h stability monitoring active.',
   },
   {
     id: 'TKT-4819',
     title: 'Gateway not provisioning',
-    status: 'open',
+    status: 'in-progress',
     priority: 'critical',
+    resolutionType: 'ai-assisted',
     subscriberId: 'SUB-1038',
     subscriberName: 'K. Yamamoto',
     createdAt: '1 hour ago',
-    assignedTo: 'unassigned',
+    assignedTo: 'Lisa Park',
     description: 'New installation gateway failed to provision. Device shows online in ACS but configuration push failed after 3 retry attempts.',
     identifiedProblem: 'Configuration payload rejected — DHCP option 60 mismatch in new firmware',
     actionsTaken: [
-      'Checked ACS provisioning logs for GW-4521',
-      'Verified configuration template compatibility',
-      'Identified firmware-specific DHCP option mismatch',
+      'AI checked ACS provisioning logs for GW-4521',
+      'AI verified configuration template compatibility',
+      'AI identified firmware-specific DHCP option mismatch',
+      'Support engineer preparing custom config payload',
     ],
-    verificationResult: 'Pending — workaround config push scheduled',
+    verificationResult: 'Pending — custom config push being prepared by support engineer',
+  },
+  {
+    id: 'TKT-4818',
+    title: 'Wi-Fi channel interference auto-resolved',
+    status: 'closed',
+    priority: 'medium',
+    resolutionType: 'autonomous',
+    subscriberId: 'SUB-1234',
+    subscriberName: 'John Smith',
+    createdAt: 'Yesterday',
+    assignedTo: 'AI Agent',
+    description: 'System autonomously detected Wi-Fi degradation at subscriber location. No user report was filed.',
+    identifiedProblem: 'Channel 6 congestion from 4 neighboring APs causing signal degradation to -72dBm',
+    actionsTaken: [
+      'AI detected QoE degradation via continuous monitoring',
+      'AI ran channel scan and neighbor analysis (12s)',
+      'AI migrated from Ch 6 to Ch 11 (8s)',
+      'AI verified signal improved to -48dBm (3min verification)',
+      'AI auto-closed case after 4-minute stability confirmation',
+    ],
+    verificationResult: 'Signal quality restored. All QoE metrics within normal range.',
+    outcome: 'Autonomously resolved in 4 minutes. Zero user disruption. No human intervention required.',
+  },
+  {
+    id: 'TKT-4817',
+    title: 'Video call QoS protection applied',
+    status: 'closed',
+    priority: 'high',
+    resolutionType: 'autonomous',
+    subscriberId: 'SUB-1234',
+    subscriberName: 'John Smith',
+    createdAt: 'Yesterday',
+    assignedTo: 'AI Agent',
+    description: 'System detected a high-value video conference session and proactively applied QoS protection when interference was detected.',
+    identifiedProblem: 'New neighboring AP activation threatened active video conference quality',
+    actionsTaken: [
+      'AI detected high-value video session in progress',
+      'AI identified rising interference from new AP on Ch 11',
+      'AI applied QoS traffic prioritization and bandwidth reservation',
+      'AI verified session maintained MOS 4.2/5.0 throughout',
+      'AI released protection after session completed (47 min)',
+    ],
+    verificationResult: 'Session completed with zero quality degradation. MOS 4.2/5.0 maintained.',
+    outcome: 'Autonomous session protection. User experienced no disruption during 47-min video call.',
   },
 ];
 
@@ -563,7 +639,7 @@ function getRootScopeCommandOptions(currentScope: ScopeSelection): ScopeCommandO
   return [
     {
       id: 'scope-all',
-      label: 'All Tenants',
+      label: 'All (Fleet)',
       description: 'Reset to the global fleet scope.',
       commandLabel: '/all',
       scope: { level: 'all' },
@@ -1147,6 +1223,27 @@ export function SupportWorkspace() {
     ]);
   };
 
+  const RESOLUTION_TYPE_CONFIG = {
+    'autonomous': {
+      label: 'Self-Healed',
+      icon: Zap,
+      color: 'var(--success)',
+      description: 'AI self-discovered and self-resolved',
+    },
+    'ai-assisted': {
+      label: 'AI + Human',
+      icon: UserCheck,
+      color: 'var(--primary)',
+      description: 'AI accelerated, human finalized',
+    },
+    'ai-resolved': {
+      label: 'AI Resolved',
+      icon: Bot,
+      color: 'var(--success)',
+      description: 'User-initiated, AI fully resolved',
+    },
+  } as const;
+
   const renderTicketCard = (ticket: Ticket) => {
     const statusColors = {
       'open': 'var(--neutral-500)',
@@ -1160,6 +1257,8 @@ export function SupportWorkspace() {
       'high': 'var(--critical)',
       'critical': 'var(--critical)',
     };
+    const resolutionConfig = ticket.resolutionType ? RESOLUTION_TYPE_CONFIG[ticket.resolutionType] : null;
+    const ResolutionIcon = resolutionConfig?.icon;
 
     return (
       <motion.div
@@ -1176,6 +1275,18 @@ export function SupportWorkspace() {
             <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
               {ticket.id}
             </span>
+            {resolutionConfig && ResolutionIcon && (
+              <span
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{
+                  background: resolutionConfig.color + '15',
+                  color: resolutionConfig.color,
+                }}
+              >
+                <ResolutionIcon className="h-2.5 w-2.5" />
+                {resolutionConfig.label}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -1702,6 +1813,146 @@ export function SupportWorkspace() {
             }}
             onPointerLeave={() => setCursorGlow((prev) => ({ ...prev, active: false }))}
           >
+            {/* Resolution Type Summary */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className="max-w-3xl mx-auto mb-6"
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
+                <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
+                  AI SUPPORT OVERVIEW
+                </span>
+                <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {/* Autonomous */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0 * 0.08, duration: 0.2 }}
+                  onClick={() => {
+                    const autonomous = MOCK_TICKETS.filter(t => t.resolutionType === 'autonomous');
+                    setHasInteracted(true);
+                    setMessages((prev) => [
+                      ...prev,
+                      { type: 'user', message: 'Show me autonomous resolutions', timestamp: getTimestamp() },
+                      {
+                        type: 'ai-text',
+                        message: `Found ${autonomous.length} cases where AI autonomously discovered and resolved issues without any human intervention. These are self-healing actions triggered by continuous monitoring.`,
+                        timestamp: getTimestamp(),
+                      },
+                      { type: 'ticket-list', tickets: autonomous },
+                    ]);
+                  }}
+                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'var(--card)',
+                    borderColor: 'var(--border)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--success)15' }}>
+                      <Zap className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--success)' }}>
+                      Self-Healed
+                    </span>
+                  </div>
+                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
+                    {MOCK_TICKETS.filter(t => t.resolutionType === 'autonomous').length}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    AI self-discovered & resolved
+                  </div>
+                </motion.button>
+
+                {/* AI-Assisted */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 * 0.08, duration: 0.2 }}
+                  onClick={() => {
+                    const assisted = MOCK_TICKETS.filter(t => t.resolutionType === 'ai-assisted');
+                    setHasInteracted(true);
+                    setMessages((prev) => [
+                      ...prev,
+                      { type: 'user', message: 'Show me AI-assisted cases', timestamp: getTimestamp() },
+                      {
+                        type: 'ai-text',
+                        message: `Found ${assisted.length} cases where AI accelerated diagnosis and recommended solutions, but human support engineers finalized the resolution. These represent the AI + Human collaboration model.`,
+                        timestamp: getTimestamp(),
+                      },
+                      { type: 'ticket-list', tickets: assisted },
+                    ]);
+                  }}
+                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'var(--card)',
+                    borderColor: 'var(--border)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--primary)15' }}>
+                      <UserCheck className="h-3.5 w-3.5" style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--primary)' }}>
+                      AI + Human
+                    </span>
+                  </div>
+                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
+                    {MOCK_TICKETS.filter(t => t.resolutionType === 'ai-assisted').length}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    AI accelerated, human finalized
+                  </div>
+                </motion.button>
+
+                {/* AI Resolved */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2 * 0.08, duration: 0.2 }}
+                  onClick={() => {
+                    const aiResolved = MOCK_TICKETS.filter(t => t.resolutionType === 'ai-resolved');
+                    setHasInteracted(true);
+                    setMessages((prev) => [
+                      ...prev,
+                      { type: 'user', message: 'Show me AI-fully-resolved cases', timestamp: getTimestamp() },
+                      {
+                        type: 'ai-text',
+                        message: `Found ${aiResolved.length} cases where users initiated a request and AI fully resolved the issue end-to-end without any human support involvement.`,
+                        timestamp: getTimestamp(),
+                      },
+                      { type: 'ticket-list', tickets: aiResolved },
+                    ]);
+                  }}
+                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'var(--card)',
+                    borderColor: 'var(--border)',
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--success)15' }}>
+                      <Bot className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--success)' }}>
+                      AI Resolved
+                    </span>
+                  </div>
+                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
+                    {MOCK_TICKETS.filter(t => t.resolutionType === 'ai-resolved').length}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    User-initiated, AI fully resolved
+                  </div>
+                </motion.button>
+              </div>
+            </motion.div>
+
             {/* Support Scenarios - Fixed at top */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1952,170 +2203,11 @@ export function SupportWorkspace() {
           </div>
         </main>
 
-        {/* Right Panel - Context */}
-        <aside className="hidden xl:block w-72 border-l overflow-auto" style={{ borderColor: 'var(--border)', background: 'var(--surface-base)' }}>
-          <div className="p-4">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
-              Support Context
-            </h3>
-
-            <div className="space-y-4">
-              {/* Ticket Queue */}
-              <div>
-                <h4 className="text-xs font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--neutral-500)' }}>
-                  <Ticket className="h-3 w-3" />
-                  TICKET QUEUE
-                </h4>
-                <div className="space-y-2">
-                  {MOCK_TICKETS.map((ticket) => (
-                    <button
-                      key={ticket.id}
-                      onClick={() => handleSelectTicket(ticket)}
-                      className="w-full text-left p-2.5 rounded-lg border transition-all hover:scale-[1.02]"
-                      style={{
-                        background: selectedTicket?.id === ticket.id ? 'var(--surface-raised)' : 'var(--card)',
-                        borderColor: selectedTicket?.id === ticket.id ? 'var(--primary)' : 'var(--border)',
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-                          {ticket.id}
-                        </span>
-                        <div
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{
-                            background:
-                              ticket.priority === 'critical'
-                                ? 'var(--critical)'
-                                : ticket.priority === 'high'
-                                  ? 'var(--warning)'
-                                  : 'var(--neutral-400)',
-                          }}
-                        />
-                      </div>
-                      <div className="text-xs truncate" style={{ color: 'var(--neutral-400)' }}>
-                        {ticket.title}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  WORKSPACE
-                </div>
-                <div className="text-sm" style={{ color: 'var(--foreground)' }}>
-                  {WORKSPACES.support.name}
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--neutral-400)' }}>
-                  {WORKSPACES.support.tagline}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  CURRENT SCOPE
-                </div>
-                <div className="text-sm" style={{ color: 'var(--foreground)' }}>
-                  {(() => {
-                    switch (currentScope.level) {
-                      case 'all': return 'All Tenants (Fleet)';
-                      case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'Region';
-                      case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'Organization';
-                      case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'Subscriber';
-                      case 'device': return 'Gateway Device';
-                      default: return 'Unknown';
-                    }
-                  })()}
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--neutral-400)' }}>
-                  Type / to change
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                  CAPABILITIES
-                </div>
-                <ul className="space-y-1">
-                  {workspaceContext.capabilities.map((cap) => (
-                    <li key={cap} className="text-xs flex items-center gap-2" style={{ color: 'var(--neutral-400)' }}>
-                      <span className="h-1 w-1 rounded-full" style={{ background: 'var(--primary)' }} />
-                      {cap}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Scope Actions */}
-              <div className="pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-                <div className="mb-3 flex items-center gap-2">
-                  <Users className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
-                  <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                    {(() => {
-                      switch (currentScope.level) {
-                        case 'all': return 'ALL TENANTS (FLEET)';
-                        case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'REGION';
-                        case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'ORGANIZATION';
-                        case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'SUBSCRIBER';
-                        case 'device': return 'GATEWAY DEVICE';
-                        default: return 'UNKNOWN';
-                      }
-                    })()}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {currentScopeActions.map((action, i) => (
-                    <motion.button
-                      key={action.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.06, duration: 0.2 }}
-                      onClick={() => {
-                        if (action.action === 'open-home-dashboard') {
-                          const subscriberId = currentScope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
-                          const sub = MOCK_SUBSCRIBERS.find(s => s.id === subscriberId);
-                          handleOpenHomeDashboard(sub);
-                        } else if (action.prompt) {
-                          handleSend(action.prompt);
-                        }
-                      }}
-                      className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"
-                      style={{
-                        background: 'var(--surface-raised)',
-                        borderColor: 'var(--border)',
-                      }}
-                    >
-                      <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
-                        {action.title}
-                      </div>
-                      <div className="text-[10px] leading-relaxed mt-1" style={{ color: 'var(--neutral-400)' }}>
-                        {action.description}
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              {selectedTicket && (
-                <div>
-                  <div className="text-xs font-medium mb-2" style={{ color: 'var(--neutral-500)' }}>
-                    SELECTED TICKET
-                  </div>
-                  <div className="p-2 rounded-lg" style={{ background: 'var(--surface-raised)' }}>
-                    <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                      {selectedTicket.id}
-                    </div>
-                    <div className="text-xs truncate" style={{ color: 'var(--neutral-400)' }}>
-                      {selectedTicket.title}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </aside>
+        {/* Right Panel - Reasoning / Actions / Audit */}
+        <WorkspaceRightPanel
+          workspaceId="support"
+          isActive={isTyping}
+        />
       </div>
     </AppLayout>
   );

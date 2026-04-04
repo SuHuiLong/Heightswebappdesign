@@ -5,6 +5,7 @@ import { ScopeSelection } from '../components/scope-selector';
 import { AppLayout } from '../components/app-layout';
 import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
+import { useRecentQuestions } from '../lib/use-recent-questions';
 import { toast } from 'sonner';
 import { resolveScenario } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
@@ -550,6 +551,7 @@ export function GrowthWorkspace() {
       timestamp: getTimestamp(),
     },
   ]);
+  const { recentQuestions, addToRecent } = useRecentQuestions('growth');
 
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
@@ -777,6 +779,7 @@ export function GrowthWorkspace() {
 
   const handleGenerativePrompt = (query: string) => {
     setHasInteracted(true);
+    addToRecent(query);
 
     const matchedScenario = resolveScenario(query);
 
@@ -1238,7 +1241,7 @@ export function GrowthWorkspace() {
                   </span>
                   </div>
                   <div className="space-y-0.5">
-                  {WORKSPACES.growth.recentQuestions.map((q, i) => (
+                  {recentQuestions.map((q, i) => (
                   <button
                   key={i}
                   type="button"

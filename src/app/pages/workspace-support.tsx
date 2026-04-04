@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { AppLayout } from '../components/app-layout';
 import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
+import { useRecentQuestions } from '../lib/use-recent-questions';
 import { toast } from 'sonner';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
 import { resolveScenario } from '../lib/scenario-resolver';
@@ -823,6 +824,7 @@ export function SupportWorkspace() {
       timestamp: getTimestamp(),
     },
   ]);
+  const { recentQuestions, addToRecent } = useRecentQuestions('support');
 
   // Scope state
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
@@ -1077,6 +1079,7 @@ export function SupportWorkspace() {
 
     // Hide the main area cards on first interaction
     setHasInteracted(true);
+    addToRecent(query);
 
     // Only clear input if it's not an override
     if (!queryOverride) {
@@ -2141,7 +2144,7 @@ export function SupportWorkspace() {
                             </span>
                           </div>
                           <div className="space-y-0.5">
-                            {WORKSPACES.support.recentQuestions.map((q, i) => (
+                            {recentQuestions.map((q, i) => (
                               <button
                                 key={i}
                                 type="button"

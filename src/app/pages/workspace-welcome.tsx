@@ -6,16 +6,16 @@ import { useReducedMotion } from 'motion/react';
 
 const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
   operations: [
-    'Find gateways with connection drops correlated to firmware versions',
-    'Investigate BGP route flapping across multiple PoPs',
+    'Correlate offline events with firmware 2.1 — is this a fleet-wide regression?',
+    'Predict which cohorts will hit memory pressure in the next 7 days',
   ],
   support: [
-    'Self-heal Wi-Fi interference by migrating gateway channels',
-    'Protect video call QoS during peak congestion periods',
+    'Show cases AI resolved without human intervention today',
+    'This subscriber reports slow internet — what did AI find?',
   ],
   growth: [
-    'Identify subscribers at risk of churning with no support tickets',
-    'Find households eligible for parental control subscriptions',
+    'Which subscribers will likely churn in the next 30 days?',
+    'Predict upsell conversion rate for bandwidth-constrained households',
   ],
 };
 

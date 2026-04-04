@@ -42,26 +42,26 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Growth-specific scenario prompts
+// Growth-specific scenario prompts — Predictive AI insights
 export const GROWTH_SCENARIOS = [
   {
     id: 'grw-churn',
     title: 'Pre-Churn Rescue',
-    description: 'Identify subscribers at risk of churning with no support tickets',
+    description: '47 subscribers flagged high churn risk — declining usage + rising tickets',
     query: 'Identify households with high latency in streaming/gaming over the last 14 days with no support tickets. Rank by churn risk.',
     icon: 'alert-triangle',
   },
   {
     id: 'grw-upsell',
     title: 'Bandwidth Upsell',
-    description: 'Find users saturating WAN bandwidth who need plan upgrades',
+    description: '2,340 households at >85% utilization, upgrade conversion confidence 72%',
     query: 'Show users saturating WAN bandwidth >2 hours/day due to video calls and 4K streaming.',
     icon: 'trending-up',
   },
   {
     id: 'grw-vas',
     title: 'VAS Opportunity',
-    description: 'Find households eligible for value-added services',
+    description: '1,100 homes with 3+ children devices but no parental controls subscription',
     query: "Find households with gaming consoles or children's devices but no parental control subscription.",
     icon: 'gift',
   },
@@ -70,28 +70,28 @@ export const GROWTH_SCENARIOS = [
 // Growth-specific quick actions
 export const GROWTH_ACTIONS = [
   {
-    id: 'grw-fleet-churn',
-    title: 'Fleet Churn Risk',
-    description: 'Get a summary of churn risk across all segments',
-    prompt: 'Show me the overall churn risk summary across all segments.',
+    id: 'grw-top-upsell',
+    title: "This week's top 10 upsell candidates",
+    description: 'AI scored and ranked',
+    prompt: 'Show me the top 10 upsell candidates this week ranked by conversion confidence.',
   },
   {
-    id: 'grw-revenue',
-    title: 'Revenue Opportunities',
-    description: 'Identify top revenue expansion opportunities',
-    prompt: 'Show me the top revenue expansion opportunities this quarter.',
+    id: 'grw-churn-no-tickets',
+    title: 'Churn risk: no tickets but declining usage',
+    description: 'Silent churn signals',
+    prompt: 'Find subscribers with declining usage but no support tickets — silent churn risk.',
   },
   {
-    id: 'grw-segments',
-    title: 'Segment Analysis',
-    description: 'Analyze customer segments for targeting',
-    prompt: 'Analyze customer segments for upsell and cross-sell targeting.',
+    id: 'grw-funnel',
+    title: 'Premium Wi-Fi conversion funnel',
+    description: 'Full funnel from impression to activation',
+    prompt: 'Show me the Premium Wi-Fi subscription conversion funnel.',
   },
   {
-    id: 'grw-campaigns',
-    title: 'Campaign Performance',
-    description: 'Review ongoing campaign results and ROI',
-    prompt: 'Show me the performance of current marketing campaigns.',
+    id: 'grw-roi',
+    title: 'Campaign ROI tracker',
+    description: 'Active campaign performance',
+    prompt: 'Show me the ROI of current marketing campaigns.',
   },
 ];
 
@@ -572,7 +572,7 @@ export function GrowthWorkspace() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Growth. I can help you identify upsell opportunities, prevent churn, and target value-added services. What would you like to explore today?`,
+      message: `2,340 upsell candidates identified. 47 subscribers flagged high churn risk this week. Premium Wi-Fi conversion: 18.3%.`,
       timestamp: getTimestamp(),
     },
   ]);
@@ -1107,7 +1107,7 @@ export function GrowthWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    AI PREDICTED
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>

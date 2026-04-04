@@ -55,60 +55,60 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Operations-specific scenario prompts
+// Operations-specific scenario prompts — AI DETECTED cards
 export const OPERATIONS_SCENARIOS = [
   {
     id: 'ops-firmware',
-    title: 'Firmware Regression',
-    description: 'Find gateways with connection drops correlated to firmware versions',
-    query: 'Show me all home gateways with unusual connection drops in the last 24 hours, group failing devices by MAC vendor, and correlate with recent firmware updates.',
+    title: 'FW 2.1.3 Memory Regression',
+    description: '47 gateways showing rising memory trend since Tuesday, correlated with last OTA',
+    query: 'Correlate offline events with firmware 2.1 across Broadcom gateways. Is this a fleet-wide regression?',
     icon: 'bug',
   },
   {
     id: 'ops-traffic',
-    title: 'Traffic Anomalies',
-    description: 'Compare L7 streaming vs gaming traffic and highlight TLS classification gaps',
-    query: 'Compare L7 streaming vs gaming traffic across Europe this week and highlight anomalies in TLS traffic classification.',
+    title: 'Region East Channel Congestion',
+    description: '5GHz utilization up 31% in 3 cohorts, 12 subscriber complaints correlated',
+    query: 'Show regional channel utilization anomalies and RF interference patterns.',
     icon: 'activity',
   },
   {
-    id: 'ops-forecast',
-    title: 'Cost Forecast',
-    description: 'Forecast next month\'s ingestion cost with growth assumptions',
-    query: 'Forecast next month\'s ingestion cost with 15% device growth.',
+    id: 'ops-deployment',
+    title: 'Service Deployment Anomaly',
+    description: 'Parental Controls install failure rate 8.2% on MTK platform, normal on Broadcom',
+    query: 'Service deployment health for parental controls rollout in the last 48 hours.',
     icon: 'trending-up',
   },
 ];
 
-// Operations-specific quick actions
+// Operations-specific quick actions — AI-driven fleet actions
 export const OPERATIONS_ACTIONS = [
   {
-    id: 'ops-fleet-health',
-    title: 'Fleet Health Summary',
-    description: 'Get overall fleet health status across all regions',
-    prompt: 'Run a fleet health analysis and show me the current status across all regions.',
-    icon: 'heart',
+    id: 'ops-zero-touch',
+    title: 'Zero-touch resolution rate',
+    description: 'AI resolution stats for this week',
+    prompt: 'Show me the zero-touch resolution rate this week across all regions.',
+    icon: 'zap',
   },
   {
-    id: 'ops-active-incidents',
-    title: 'Active Incidents',
-    description: 'View all currently active incidents and their status',
-    prompt: 'Show me all active incidents across the fleet.',
-    icon: 'alert-triangle',
+    id: 'ops-degrading-cohorts',
+    title: 'Cohorts trending toward degradation',
+    description: 'AI-flagged cohorts with early warning',
+    prompt: 'Which cohorts are trending toward degradation? Show predictive risk analysis.',
+    icon: 'trending-down',
   },
   {
-    id: 'ops-regional-view',
-    title: 'Regional Overview',
-    description: 'Compare health metrics across all regions',
-    prompt: 'Show me a regional breakdown comparing health metrics.',
-    icon: 'globe',
+    id: 'ops-deployment-risk',
+    title: 'Upcoming deployments at risk',
+    description: 'AI risk score for pending rollouts',
+    prompt: 'Show me upcoming deployments and their AI-assessed risk scores.',
+    icon: 'shield',
   },
   {
-    id: 'ops-cohort-analysis',
-    title: 'Cohort Analysis',
-    description: 'Analyze specific device cohorts for patterns',
-    prompt: 'Analyze the Broadcom device cohort for connection patterns.',
-    icon: 'layers',
+    id: 'ops-fleet-delta',
+    title: 'Fleet health vs last week',
+    description: 'Week-over-week delta comparison',
+    prompt: 'Compare fleet health metrics vs last week. What changed?',
+    icon: 'git-compare',
   },
 ];
 
@@ -295,6 +295,10 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
 
 /** All scope action IDs used by this workspace (for settings management) */
 export const ALL_OPS_SCOPE_ACTIONS: ScopeQuickAction[] = [
+  { id: 'ops-zero-touch', title: 'Zero-touch resolution rate', description: 'AI resolution stats for this week', prompt: 'Show zero-touch resolution rate' },
+  { id: 'ops-degrading-cohorts', title: 'Cohorts trending toward degradation', description: 'AI-flagged cohorts with early warning', prompt: 'Show degrading cohorts' },
+  { id: 'ops-deployment-risk', title: 'Upcoming deployments at risk', description: 'AI risk score for pending rollouts', prompt: 'Show deployment risks' },
+  { id: 'ops-fleet-delta', title: 'Fleet health vs last week', description: 'Week-over-week delta comparison', prompt: 'Compare fleet health vs last week' },
   { id: 'all-device-list', title: 'Show fleet device list', description: 'Review gateways, routers, and APs across the fleet', prompt: 'Show the fleet device list' },
   { id: 'all-outages', title: 'View active outages', description: 'See current outages and impacted zones', prompt: 'Show all active outages' },
   { id: 'all-bandwidth', title: 'Review bandwidth overview', description: 'Look at aggregate traffic history and usage', prompt: 'Show bandwidth overview' },
@@ -663,7 +667,7 @@ export function OperationsWorkspace() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Operations. I can help you investigate fleet-wide incidents, analyze cohorts, and manage network-wide issues. What would you like to focus on today?`,
+      message: `12,458 online. 23 degraded. 1 emerging pattern: FW 2.1.3 memory trend across Region North — projected critical in ~5 days.`,
       timestamp: getTimestamp(),
     },
   ]);
@@ -1213,7 +1217,7 @@ export function OperationsWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    AI DETECTED
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>

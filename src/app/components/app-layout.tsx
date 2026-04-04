@@ -43,13 +43,13 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
   };
 
   const navItems = [
-    { path: '/operations', label: 'Command Center', icon: Activity },
+    { path: '/operations', label: 'Fleet Intelligence', icon: Activity },
     { path: '/audit', label: 'Audit', icon: FileText },
     { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
 
   const workspaceItems = [
-    { path: '/operations', label: 'Operations', icon: Activity, id: 'operations' },
+    { path: '/operations', label: 'Fleet', icon: Activity, id: 'operations' },
     { path: '/support', label: 'Support', icon: Users, id: 'support' },
     { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth' },
   ];

@@ -88,37 +88,37 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Support-specific scenario prompts
+// Support-specific scenario prompts — Real AI-resolved cases
 export const SUPPORT_SCENARIOS = [
   {
     id: 'sup-wifi-recovery',
-    title: 'Autonomous Wi-Fi Recovery',
-    description: 'AI self-discovered and self-resolved Wi-Fi interference — no human intervention',
+    title: 'Wi-Fi interference auto-resolved on 3 homes',
+    description: 'AI self-discovered 5GHz congestion, migrated channels autonomously',
     query: 'Detect and resolve Wi-Fi interference on home gateway GW-7834-HOME. The subscriber reports slow speeds on 5GHz. Analyze channel utilization, identify interference sources, and automatically migrate to the optimal channel.',
     icon: 'wifi',
     resolutionType: 'autonomous' as const,
   },
   {
     id: 'sup-session-protection',
-    title: 'Critical Session Protection',
-    description: 'AI autonomously protected an active video call from interference',
+    title: '2 video calls protected during peak',
+    description: 'AI detected active Zoom sessions and applied QoS prioritization',
     query: 'Protect active video conference sessions for subscriber SUB-1234 during peak congestion. Monitor QoS metrics, prioritize real-time traffic, and ensure minimum MOS score of 4.0.',
     icon: 'shield',
     resolutionType: 'autonomous' as const,
   },
   {
     id: 'sup-firmware-investigation',
-    title: 'Firmware Regression Investigation',
-    description: 'AI accelerated root-cause analysis, support engineer executes rollback',
+    title: 'FW 2.1.3 causing IoT disconnects',
+    description: 'AI traced root cause to ACS config change in firmware rollout',
     query: 'Investigate intermittent connection drops on subscriber SUB-1234 (John Smith). Collect telemetry, correlate with firmware versions, and identify root cause.',
     icon: 'activity',
     resolutionType: 'ai-assisted' as const,
   },
   {
-    id: 'sub-channel-fix',
-    title: 'User-Reported Slow Speed',
-    description: 'User reported buffering — AI fully diagnosed and resolved autonomously',
-    query: 'Fix slow 5GHz speeds for subscriber Sarah Johnson (SUB-1190). Speed tests show 120 Mbps vs expected 500 Mbps.',
+    id: 'sub-external-attribution',
+    title: 'User slow — AI confirmed external CDN',
+    description: 'Local diagnostics all green, external attribution: game server latency',
+    query: 'Fix slow speeds for subscriber Sarah Johnson (SUB-1190). Speed tests show 120 Mbps vs expected 500 Mbps.',
     icon: 'wifi',
     resolutionType: 'ai-resolved' as const,
   },
@@ -323,33 +323,32 @@ const MOCK_SUBSCRIBERS: Subscriber[] = [
 // Support-specific actions
 export const SUPPORT_ACTIONS = [
   {
-    id: 'sup-search-ticket',
-    title: 'Search Ticket',
-    prompt: 'Search for ticket ',
-    icon: 'ticket',
-    description: 'Find by ticket ID',
+    id: 'sup-ai-resolved',
+    title: 'Cases AI resolved today',
+    prompt: 'Show me all cases AI resolved without human intervention today.',
+    icon: 'bot',
+    description: 'Zero-touch resolved cases',
   },
   {
-    id: 'sup-new-ticket',
-    title: 'New Ticket',
-    prompt: 'Create a new ticket for subscriber ',
-    icon: 'plus',
-    description: 'Open new support case',
+    id: 'sup-needs-attention',
+    title: 'Cases needing my attention',
+    prompt: 'Show me open cases that AI could not resolve and need human review.',
+    icon: 'alert-triangle',
+    description: 'Pending human review',
   },
   {
-    id: 'sup-subscriber-health',
-    title: 'Subscriber Health',
-    prompt: 'Show health summary for subscriber ',
-    icon: 'heart',
-    description: 'Check subscriber status',
+    id: 'sup-repeat-offenders',
+    title: 'Repeat offenders',
+    prompt: 'Show me subscribers with 3+ tickets in the last 30 days.',
+    icon: 'repeat',
+    description: 'Same home, recurring issues',
   },
   {
-    id: 'sub-home-dashboard',
-    title: 'Home Dashboard',
-    prompt: '',
-    icon: 'home',
-    description: 'View static dashboard',
-    action: 'open-home-dashboard',
+    id: 'sup-pending-validation',
+    title: 'Pending validations',
+    prompt: 'Show me cases where AI applied a fix and is waiting for stability confirmation.',
+    icon: 'check-circle',
+    description: 'AI fixes awaiting verification',
   },
 ];
 
@@ -910,7 +909,7 @@ export function SupportWorkspace() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Support. I can help you troubleshoot tickets, investigate subscriber issues, and access home dashboards. How can I assist you today?`,
+      message: `14 cases auto-resolved today. 3 need your review. 1 escalation pending.`,
       timestamp: getTimestamp(),
     },
   ]);
@@ -2070,7 +2069,7 @@ export function SupportWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    AI RESOLVED TODAY
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>

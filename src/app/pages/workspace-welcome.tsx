@@ -1,8 +1,23 @@
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { Activity, Users, TrendingUp, ArrowRight, ChevronRight, Sparkles } from 'lucide-react';
-import { WORKSPACES, getWorkspaceContext } from '../lib/workspace-definitions';
+import { WORKSPACES } from '../lib/workspace-definitions';
 import { useReducedMotion } from 'motion/react';
+
+const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
+  operations: [
+    'Find gateways with connection drops correlated to firmware versions',
+    'Investigate BGP route flapping across multiple PoPs',
+  ],
+  support: [
+    'Self-heal Wi-Fi interference by migrating gateway channels',
+    'Protect video call QoS during peak congestion periods',
+  ],
+  growth: [
+    'Identify subscribers at risk of churning with no support tickets',
+    'Find households eligible for parental control subscriptions',
+  ],
+};
 
 const WORKSPACE_CONFIG = {
   operations: { route: '/operations', icon: Activity },
@@ -88,7 +103,7 @@ export function WorkspaceWelcome() {
           <div className="grid gap-6 lg:grid-cols-3">
             {(Object.values(WORKSPACES) as const).map((workspace, index) => {
               const { icon: Icon, route } = WORKSPACE_CONFIG[workspace.id];
-              const capabilities = getWorkspaceContext(workspace.id).capabilities;
+              const investigations = SUGGESTED_INVESTIGATIONS[workspace.id];
 
               return (
                 <motion.div
@@ -172,13 +187,13 @@ export function WorkspaceWelcome() {
                         </div>
                       </div>
 
-                      {/* Capabilities */}
+                      {/* Suggested Questions */}
                       <div className="mb-5 flex-1">
                         <div className="mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--neutral-500)' }}>
-                          Capabilities
+                          Suggested questions
                         </div>
                         <ul className="space-y-2">
-                          {capabilities.map((cap, idx) => (
+                          {investigations.map((question, idx) => (
                             <li
                               key={idx}
                               className="flex items-start gap-2 text-xs leading-relaxed rounded-lg px-2.5 py-2 transition-colors duration-200"
@@ -188,7 +203,7 @@ export function WorkspaceWelcome() {
                               }}
                             >
                               <ChevronRight className="h-3 w-3 shrink-0 mt-0.5" style={{ color: workspace.accentColor }} />
-                              <span>{cap}</span>
+                              <span>{question}</span>
                             </li>
                           ))}
                         </ul>

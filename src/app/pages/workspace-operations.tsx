@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Activity, Search, Send, Sparkles, Users, Zap, Check } from 'lucide-react';
+import { Activity, Search, Send, Sparkles, Users, Zap, Check, History, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
 import { AppLayout } from '../components/app-layout';
@@ -630,6 +630,7 @@ export function OperationsWorkspace() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -938,6 +939,7 @@ export function OperationsWorkspace() {
 
     const query = input;
     setInput('');
+    setSuppressSuggestions(true);
     handleGenerativePrompt(query);
   };
 
@@ -1173,7 +1175,7 @@ export function OperationsWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    OPERATIONS SCENARIOS
+                    WHAT YOU CAN ASK
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
@@ -1309,7 +1311,7 @@ export function OperationsWorkspace() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleInputKeyDown}
-                    onFocus={() => setIsFocused(true)}
+                    onFocus={() => { setIsFocused(true); setSuppressSuggestions(false); }}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Ask about fleet operations, incidents, or cohorts... (Type / to change scope)"
                     className="w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm transition-all"
@@ -1319,6 +1321,77 @@ export function OperationsWorkspace() {
                       boxShadow: isFocused ? '0 0 0 3px var(--focus-ring)' : 'var(--shadow-xs)',
                     }}
                   />
+                  {/* Question Suggestions Dropdown */}
+                  <AnimatePresence>
+                    {isFocused && !input.trim() && !isScopeCommandMode && !suppressSuggestions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute inset-x-0 bottom-full z-20 mb-2 overflow-hidden rounded-xl border shadow-lg"
+                        style={{
+                          background: 'var(--card)',
+                          borderColor: 'var(--border)',
+                        }}
+                      >
+                        {/* Recent Questions */}
+                        <div className="px-3 py-2">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <History className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
+                            <span className="text-[11px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                              Recent
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {WORKSPACES.operations.recentQuestions.map((q, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setInput(q);
+                                  inputRef.current?.focus();
+                                }}
+                                className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-base)]"
+                                style={{ color: 'var(--neutral-400)' }}
+                              >
+                                <span className="line-clamp-1">{q}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="h-px" style={{ background: 'var(--border-subtle)' }} />
+                        {/* Top Questions */}
+                        <div className="px-3 py-2">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <TrendingUp className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
+                            <span className="text-[11px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                              Top Questions
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {WORKSPACES.operations.topQuestions.map((q, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setInput(q);
+                                  inputRef.current?.focus();
+                                }}
+                                className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-base)]"
+                                style={{ color: 'var(--neutral-400)' }}
+                              >
+                                <span className="line-clamp-1">{q}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {/* Scope Palette Dropdown */}
                   <AnimatePresence>
                     {isScopeCommandMode && (

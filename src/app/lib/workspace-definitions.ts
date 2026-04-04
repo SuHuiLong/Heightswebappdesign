@@ -23,6 +23,10 @@ export interface WorkspaceDefinition {
   accentColor: string;
   // Is this workspace fully implemented?
   isImplemented: boolean;
+  // Recent questions (simulated for demo)
+  recentQuestions: string[];
+  // Top/popular questions (simulated for demo)
+  topQuestions: string[];
 }
 
 export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
@@ -41,6 +45,17 @@ export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
     ],
     accentColor: 'var(--ambient-blue)',
     isImplemented: true,
+    recentQuestions: [
+      'Show gateways with connection drops in the last 24 hours',
+      'Compare streaming vs gaming traffic across Europe',
+      'Fleet health summary for APAC region',
+    ],
+    topQuestions: [
+      'Show me all active outages across regions',
+      'Analyze firmware regression across fleet',
+      'Compare L7 traffic anomalies this week',
+      'Run a fleet health analysis',
+    ],
   },
 
   support: {
@@ -58,6 +73,17 @@ export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
     ],
     accentColor: 'var(--ambient-cyan)',
     isImplemented: true,
+    recentQuestions: [
+      'Troubleshoot ticket TKT-4821 for subscriber John Smith',
+      'Run diagnostics on gateway GW-7834-HOME',
+      'Show health summary for subscriber SUB-1234',
+    ],
+    topQuestions: [
+      'Investigate intermittent connection drops on SUB-1234',
+      'Detect and resolve Wi-Fi interference on home gateway',
+      'Protect active video call sessions during peak congestion',
+      'Show me the home overview for SUB-1234',
+    ],
   },
 
   growth: {
@@ -74,6 +100,17 @@ export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
     ],
     accentColor: 'var(--ambient-warm)',
     isImplemented: true,
+    recentQuestions: [
+      'Identify households with high latency and no support tickets',
+      'Show users saturating WAN bandwidth >2 hours/day',
+      'Find households eligible for parental control subscription',
+    ],
+    topQuestions: [
+      'Rank subscribers by churn risk score',
+      'Find bandwidth saturation opportunities for upsell',
+      'Identify VAS cross-sell targets by device fingerprint',
+      'Forecast revenue impact of plan upgrade campaign',
+    ],
   },
 };
 

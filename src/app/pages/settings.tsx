@@ -22,9 +22,10 @@ import { toast } from 'sonner';
 import { OPERATIONS_SCENARIOS, ALL_OPS_SCOPE_ACTIONS } from './workspace-operations';
 import { SUPPORT_SCENARIOS, ALL_SUPPORT_SCOPE_ACTIONS } from './workspace-support';
 import { GROWTH_SCENARIOS, ALL_GROWTH_SCOPE_ACTIONS } from './workspace-growth';
+import { getWorkspaceScopeConfig } from '../lib/workspace-experience';
 
 const WORKSPACE_META: Record<WorkspaceKey, { label: string; color: string }> = {
-  operations: { label: 'Operations', color: 'var(--ambient-violet)' },
+  operations: { label: 'Fleet Intelligence', color: 'var(--ambient-violet)' },
   support: { label: 'Support', color: 'var(--ambient-cyan)' },
   growth: { label: 'Growth', color: 'var(--ambient-amber)' },
 };
@@ -50,17 +51,19 @@ const DEFAULT_SCOPE_ACTIONS: Record<WorkspaceKey, ScopeActionCard[]> = {
 };
 
 const SCOPE_LEVELS = [
-  { prefix: 'all-', label: 'Fleet' },
-  { prefix: 'region-', label: 'Region' },
-  { prefix: 'org-', label: 'Organization' },
-  { prefix: 'sub-', label: 'Subscriber' },
-  { prefix: 'device-', label: 'Device' },
+  { prefix: 'all-', level: 'all' },
+  { prefix: 'region-', level: 'region' },
+  { prefix: 'org-', level: 'organization' },
+  { prefix: 'sub-', level: 'subscriber' },
+  { prefix: 'device-', level: 'device' },
 ] as const;
 
-function groupByScopeLevel(cards: ScopeActionCard[]) {
-  return SCOPE_LEVELS.map(({ prefix, label }) => ({
+function groupByScopeLevel(workspace: WorkspaceKey, cards: ScopeActionCard[]) {
+  const scopeConfig = getWorkspaceScopeConfig(workspace);
+
+  return SCOPE_LEVELS.map(({ prefix, level }) => ({
     level: prefix,
-    label,
+    label: scopeConfig.levelLabels[level] ?? level,
     cards: cards.filter(c => c.id.startsWith(prefix)),
   })).filter(g => g.cards.length > 0);
 }
@@ -285,7 +288,7 @@ function CompactScopeList({ scopeActions, workspace, cardSettings }: {
   cardSettings: ReturnType<typeof useWorkspaceCardSettings>;
 }) {
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
-  const groups = groupByScopeLevel(scopeActions);
+  const groups = groupByScopeLevel(workspace, scopeActions);
 
   return (
     <div className="pt-1">

@@ -27,6 +27,19 @@ import {
   getParentScopeForDevice,
   normalizeScopeSearchValue,
 } from '../lib/scope-data';
+import {
+  ALL_SUPPORT_SCOPE_ACTIONS as ALL_SUPPORT_SCOPE_ACTIONS_DATA,
+  getScopeCommandOptionsForWorkspace,
+  getWorkspaceDefaultScope,
+  getWorkspaceExperience,
+  getWorkspaceScopeActions,
+  getWorkspaceScopePaletteContextLabel,
+  getWorkspaceScopePalettePlaceholder,
+  getWorkspaceScopePaletteStateForTarget,
+  getWorkspaceScopeTagLabel,
+  parseScopeCommandInputForWorkspace,
+  SUPPORT_SCENARIOS as SUPPORT_SCENARIOS_DATA,
+} from '../lib/workspace-experience';
 
 // Types
 type ViewMode = 'chat' | 'home-dashboard' | 'ticket-workspace';
@@ -88,41 +101,7 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Support-specific scenario prompts
-export const SUPPORT_SCENARIOS = [
-  {
-    id: 'sup-wifi-recovery',
-    title: 'Autonomous Wi-Fi Recovery',
-    description: 'AI self-discovered and self-resolved Wi-Fi interference — no human intervention',
-    query: 'Detect and resolve Wi-Fi interference on home gateway GW-7834-HOME. The subscriber reports slow speeds on 5GHz. Analyze channel utilization, identify interference sources, and automatically migrate to the optimal channel.',
-    icon: 'wifi',
-    resolutionType: 'autonomous' as const,
-  },
-  {
-    id: 'sup-session-protection',
-    title: 'Critical Session Protection',
-    description: 'AI autonomously protected an active video call from interference',
-    query: 'Protect active video conference sessions for subscriber SUB-1234 during peak congestion. Monitor QoS metrics, prioritize real-time traffic, and ensure minimum MOS score of 4.0.',
-    icon: 'shield',
-    resolutionType: 'autonomous' as const,
-  },
-  {
-    id: 'sup-firmware-investigation',
-    title: 'Firmware Regression Investigation',
-    description: 'AI accelerated root-cause analysis, support engineer executes rollback',
-    query: 'Investigate intermittent connection drops on subscriber SUB-1234 (John Smith). Collect telemetry, correlate with firmware versions, and identify root cause.',
-    icon: 'activity',
-    resolutionType: 'ai-assisted' as const,
-  },
-  {
-    id: 'sub-channel-fix',
-    title: 'User-Reported Slow Speed',
-    description: 'User reported buffering — AI fully diagnosed and resolved autonomously',
-    query: 'Fix slow 5GHz speeds for subscriber Sarah Johnson (SUB-1190). Speed tests show 120 Mbps vs expected 500 Mbps.',
-    icon: 'wifi',
-    resolutionType: 'ai-resolved' as const,
-  },
-];
+export const SUPPORT_SCENARIOS = SUPPORT_SCENARIOS_DATA;
 
 // Mock data
 const MOCK_TICKETS: Ticket[] = [
@@ -363,203 +342,11 @@ interface ScopeQuickAction {
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
-  const getScopeDisplayLabel = (scope: ScopeSelection) => {
-    switch (scope.level) {
-      case 'all':
-        return 'all tenants';
-      case 'region':
-        return REGION_LABELS[scope.region ?? ''] ?? 'this region';
-      case 'organization':
-        return ORGANIZATION_LABELS[scope.organization ?? ''] ?? 'this organization';
-      case 'subscriber': {
-        const subscriberName = SUBSCRIBER_LABELS[scope.subscriber ?? ''];
-        if (subscriberName && scope.subscriber) {
-          return `${subscriberName} (${scope.subscriber})`;
-        }
-        return 'this subscriber';
-      }
-      case 'device': {
-        const subscriberId = scope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
-        const subscriberName = SUBSCRIBER_LABELS[subscriberId] ?? DEFAULT_SUBSCRIBER_NAME;
-        const scopedDevices = getDevicesForSubscriber(subscriberId);
-        const fallbackDevice = scopedDevices[0] ?? { id: 'GW-7834-HOME', name: 'Home' };
-        const selectedDevice =
-          scopedDevices.find((device) => device.id === scope.device) ?? fallbackDevice;
-        return `${subscriberName} • ${getGatewaySiteLabel(subscriberName, selectedDevice.name)} Gateway`;
-      }
-      default:
-        return 'the current scope';
-    }
-  };
-
-  const scopeLabel = getScopeDisplayLabel(scope);
-
-  switch (scope.level) {
-    case 'all':
-      return [
-        {
-          id: 'all-tickets',
-          title: 'View all tickets',
-          description: 'Review all open tickets across the fleet.',
-          prompt: 'Show me all open tickets',
-        },
-        {
-          id: 'all-subscribers',
-          title: 'Browse subscribers',
-          description: 'Search and filter subscribers by health or status.',
-          prompt: 'Show subscriber list',
-        },
-        {
-          id: 'all-active-cases',
-          title: 'Active cases',
-          description: 'View currently active support cases.',
-          prompt: 'Show active support cases',
-        },
-        {
-          id: 'all-recent-resolved',
-          title: 'Recently resolved',
-          description: 'View tickets resolved in the last 24 hours.',
-          prompt: 'Show recently resolved tickets',
-        },
-      ];
-    case 'region':
-      return [
-        {
-          id: 'region-tickets',
-          title: 'Regional tickets',
-          description: `View tickets in ${scopeLabel}.`,
-          prompt: `Show tickets in ${scopeLabel}`,
-        },
-        {
-          id: 'region-subscribers',
-          title: 'Regional subscribers',
-          description: `Browse subscribers in ${scopeLabel}.`,
-          prompt: `Show subscribers in ${scopeLabel}`,
-        },
-        {
-          id: 'region-home-dashboards',
-          title: 'SLA compliance',
-          description: `Check SLA compliance for ${scopeLabel}.`,
-          prompt: `Check SLA compliance for ${scopeLabel}`,
-        },
-        {
-          id: 'region-health',
-          title: 'Regional health',
-          description: `Check health status for ${scopeLabel}.`,
-          prompt: `Check health for ${scopeLabel}`,
-        },
-      ];
-    case 'organization':
-      return [
-        {
-          id: 'org-tickets',
-          title: 'Organization tickets',
-          description: `View tickets for ${scopeLabel}.`,
-          prompt: `Show tickets for ${scopeLabel}`,
-        },
-        {
-          id: 'org-subscribers',
-          title: 'Organization subscribers',
-          description: `Browse subscribers in ${scopeLabel}.`,
-          prompt: `Show subscribers for ${scopeLabel}`,
-        },
-        {
-          id: 'org-home-dashboards',
-          title: 'Capacity overview',
-          description: `View capacity and utilization for ${scopeLabel}.`,
-          prompt: `Show capacity overview for ${scopeLabel}`,
-        },
-        {
-          id: 'org-sla',
-          title: 'SLA status',
-          description: `Check SLA compliance for ${scopeLabel}.`,
-          prompt: `Check SLA for ${scopeLabel}`,
-        },
-      ];
-    case 'subscriber':
-      return [
-        {
-          id: 'sub-tickets',
-          title: 'Subscriber tickets',
-          description: `View tickets for ${scopeLabel}.`,
-          prompt: `Show tickets for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-health',
-          title: 'Subscriber health',
-          description: `Check health status for ${scopeLabel}.`,
-          prompt: `Check health for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-home-dashboard',
-          title: 'Home dashboard',
-          description: `Open home dashboard for ${scopeLabel}.`,
-          prompt: '',
-          action: 'open-home-dashboard',
-        },
-        {
-          id: 'sub-devices',
-          title: 'Gateway devices',
-          description: `View gateway devices for ${scopeLabel}.`,
-          prompt: `Show gateway devices for ${scopeLabel}`,
-        },
-      ];
-    case 'device':
-      return [
-        {
-          id: 'device-topology',
-          title: 'Gateway topology',
-          description: `View topology for this gateway.`,
-          prompt: `Show topology for ${scopeLabel}`,
-        },
-        {
-          id: 'device-diagnostics',
-          title: 'Run diagnostics',
-          description: `Run diagnostics for this gateway.`,
-          prompt: `Run diagnostics for ${scopeLabel}`,
-        },
-        {
-          id: 'device-speed-test',
-          title: 'Speed test',
-          description: `Run speed test for this gateway.`,
-          prompt: `Run speed test for ${scopeLabel}`,
-        },
-        {
-          id: 'device-home-dashboard',
-          title: 'Home dashboard',
-          description: `View home dashboard for this gateway.`,
-          prompt: '',
-          action: 'open-home-dashboard',
-        },
-      ];
-    default:
-      return [];
-  }
+  return getWorkspaceScopeActions('support', scope);
 }
 
 /** All scope action IDs used by this workspace (for settings management) */
-export const ALL_SUPPORT_SCOPE_ACTIONS: ScopeQuickAction[] = [
-  { id: 'all-tickets', title: 'View all tickets', description: 'Review all open tickets across the fleet', prompt: 'Show me all open tickets' },
-  { id: 'all-subscribers', title: 'Browse subscribers', description: 'Search and filter subscribers by health or status', prompt: 'Show subscriber list' },
-  { id: 'all-active-cases', title: 'Active cases', description: 'View currently active support cases', prompt: 'Show active support cases' },
-  { id: 'all-recent-resolved', title: 'Recently resolved', description: 'View tickets resolved in the last 24 hours', prompt: 'Show recently resolved tickets' },
-  { id: 'region-tickets', title: 'Regional tickets', description: 'View tickets in this region', prompt: 'Show regional tickets' },
-  { id: 'region-subscribers', title: 'Regional subscribers', description: 'Browse subscribers in this region', prompt: 'Show regional subscribers' },
-  { id: 'region-home-dashboards', title: 'SLA compliance', description: 'Check SLA compliance for this region', prompt: 'Check SLA compliance' },
-  { id: 'region-health', title: 'Regional health', description: 'Check health status for this region', prompt: 'Check regional health' },
-  { id: 'org-tickets', title: 'Organization tickets', description: 'View tickets for this organization', prompt: 'Show organization tickets' },
-  { id: 'org-subscribers', title: 'Organization subscribers', description: 'Browse subscribers in this organization', prompt: 'Show organization subscribers' },
-  { id: 'org-home-dashboards', title: 'Capacity overview', description: 'View capacity and utilization', prompt: 'Show capacity overview' },
-  { id: 'org-sla', title: 'SLA status', description: 'Check SLA compliance for this organization', prompt: 'Check SLA status' },
-  { id: 'sub-tickets', title: 'Subscriber tickets', description: 'View tickets for this subscriber', prompt: 'Show subscriber tickets' },
-  { id: 'sub-health', title: 'Subscriber health', description: 'Check health status for this subscriber', prompt: 'Check subscriber health' },
-  { id: 'sub-home-dashboard', title: 'Home dashboard', description: 'Open home dashboard', prompt: '', action: 'open-home-dashboard' },
-  { id: 'sub-devices', title: 'Gateway devices', description: 'View gateway devices', prompt: 'Show gateway devices' },
-  { id: 'device-topology', title: 'Gateway topology', description: 'View topology for this gateway', prompt: 'Show topology' },
-  { id: 'device-diagnostics', title: 'Run diagnostics', description: 'Run diagnostics for this gateway', prompt: 'Run diagnostics' },
-  { id: 'device-speed-test', title: 'Speed test', description: 'Run speed test for this gateway', prompt: 'Run speed test' },
-  { id: 'device-home-dashboard', title: 'Home dashboard', description: 'View home dashboard', prompt: '', action: 'open-home-dashboard' },
-];
+export const ALL_SUPPORT_SCOPE_ACTIONS: ScopeQuickAction[] = ALL_SUPPORT_SCOPE_ACTIONS_DATA;
 
 // Scope Palette Types (same as Operations)
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -892,6 +679,7 @@ function getScopeCommandOptions(
 
 export function SupportWorkspace() {
   const shouldReduceMotion = useReducedMotion();
+  const experience = useMemo(() => getWorkspaceExperience('support'), []);
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
@@ -910,7 +698,7 @@ export function SupportWorkspace() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Support. I can help you troubleshoot tickets, investigate subscriber issues, and access home dashboards. How can I assist you today?`,
+      message: experience.initialMessage,
       timestamp: getTimestamp(),
     },
   ]);
@@ -921,17 +709,32 @@ export function SupportWorkspace() {
   const scopeActionOverrides = useScopeActionOverrides('support');
 
   // Scope state
-  const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
+  const [currentScope, setCurrentScope] = useState<ScopeSelection>(
+    getWorkspaceDefaultScope('support'),
+  );
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
-    getScopePaletteStateForTarget(null, { level: 'all' }),
+    getWorkspaceScopePaletteStateForTarget(
+      'support',
+      null,
+      getWorkspaceDefaultScope('support'),
+    ),
   );
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
   // Scope command parsing
-  const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
+  const parsedScopeCommand = useMemo(
+    () => parseScopeCommandInputForWorkspace(input),
+    [input],
+  );
   const scopePaletteQuery = useMemo(() => parsedScopeCommand?.filter ?? '', [parsedScopeCommand]);
   const scopeCommandOptions = useMemo(
-    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery, currentScope),
+    () =>
+      getScopeCommandOptionsForWorkspace(
+        'support',
+        scopePaletteState,
+        scopePaletteQuery,
+        currentScope,
+      ),
     [currentScope, scopePaletteQuery, scopePaletteState],
   );
   const isScopeCommandMode = input.startsWith('/');
@@ -953,11 +756,19 @@ export function SupportWorkspace() {
   // Update scope palette state based on command
   useEffect(() => {
     if (!isScopeCommandMode) {
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('support', null, currentScope),
+      );
       return;
     }
 
-    setScopePaletteState(getScopePaletteStateForTarget(parsedScopeCommand?.command ?? null, currentScope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget(
+        'support',
+        parsedScopeCommand?.command ?? null,
+        currentScope,
+      ),
+    );
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
   const handleScopeChange = (scope: ScopeSelection) => {
@@ -1037,7 +848,9 @@ export function SupportWorkspace() {
   const applyScopeChange = (scope: ScopeSelection) => {
     setInput('');
     setActiveCommandIndex(0);
-    setScopePaletteState(getScopePaletteStateForTarget(null, scope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget('support', null, scope),
+    );
     handleScopeChange(scope);
   };
 
@@ -1099,7 +912,9 @@ export function SupportWorkspace() {
       event.preventDefault();
       setInput('');
       setActiveCommandIndex(0);
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('support', null, currentScope),
+      );
       return;
     }
 
@@ -1109,7 +924,9 @@ export function SupportWorkspace() {
       event.preventDefault();
 
       if (scopePaletteState.step === 'region') {
-        setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+        setScopePaletteState(
+          getWorkspaceScopePaletteStateForTarget('support', null, currentScope),
+        );
         return;
       }
 
@@ -2070,7 +1887,7 @@ export function SupportWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    {experience.scenarioHeading}
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
@@ -2149,17 +1966,14 @@ export function SupportWorkspace() {
                 <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 <div className="flex items-center gap-2">
                   <Users className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
+                  <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
+                    {experience.scopeActionHeading}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    ·
+                  </span>
                   <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                    {(() => {
-                      switch (currentScope.level) {
-                        case 'all': return 'ALL TENANTS (FLEET)';
-                        case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'REGION';
-                        case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'ORGANIZATION';
-                        case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'SUBSCRIBER';
-                        case 'device': return 'GATEWAY DEVICE';
-                        default: return 'UNKNOWN';
-                      }
-                    })()}
+                    {getWorkspaceScopeTagLabel('support', currentScope)}
                   </span>
                   <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
                     · Type / to change
@@ -2215,7 +2029,7 @@ export function SupportWorkspace() {
                     onKeyDown={handleInputKeyDown}
                     onFocus={() => { setIsFocused(true); setSuppressSuggestions(false); }}
                     onBlur={() => setIsFocused(false)}
-                    placeholder="Search tickets, subscribers, or ask for help... (Type / to change scope)"
+                    placeholder="Ask about cases, homes, or gateway fixes... (Type / to change scope)"
                     className="w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm transition-all"
                     style={{
                       background: 'var(--surface-raised)',
@@ -2312,11 +2126,11 @@ export function SupportWorkspace() {
                         </div>
                         <div className="border-b px-3 py-2 text-[11px]" style={{ borderColor: 'var(--border-subtle)' }}>
                           <span className="font-medium" style={{ color: 'var(--foreground)' }}>
-                            {getScopePalettePlaceholder(scopePaletteState)}
+                            {getWorkspaceScopePalettePlaceholder('support', scopePaletteState)}
                           </span>
-                          {getScopePaletteContextLabel(scopePaletteState) && (
+                          {getWorkspaceScopePaletteContextLabel('support', scopePaletteState) && (
                             <span className="ml-2" style={{ color: 'var(--neutral-400)' }}>
-                              {getScopePaletteContextLabel(scopePaletteState)}
+                              {getWorkspaceScopePaletteContextLabel('support', scopePaletteState)}
                             </span>
                           )}
                         </div>

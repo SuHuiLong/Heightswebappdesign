@@ -14,33 +14,12 @@ import {
   Shield,
 } from 'lucide-react';
 import { WorkspaceId } from '../lib/workspace-definitions';
-
-// ─── Types ─────────────────────────────────────────────────────────────────
-
-export interface ReasoningStep {
-  id: string;
-  label: string;
-  detail: string;
-  confidence?: number;
-  status: 'complete' | 'in-progress' | 'pending';
-}
-
-export interface BackendAction {
-  id: string;
-  label: string;
-  status: 'success' | 'running' | 'pending' | 'failed';
-  timestamp: string;
-  detail?: string;
-}
-
-export interface AuditEntry {
-  id: string;
-  action: string;
-  actor: string;
-  timestamp: string;
-  type: 'query' | 'action' | 'system' | 'alert';
-  detail?: string;
-}
+import {
+  getWorkspaceExperience,
+  type AuditEntry,
+  type BackendAction,
+  type ReasoningStep,
+} from '../lib/workspace-experience';
 
 export interface WorkspaceRightPanelProps {
   workspaceId: WorkspaceId;
@@ -53,36 +32,6 @@ export interface WorkspaceRightPanelProps {
   /** Audit log entries */
   auditEntries?: AuditEntry[];
 }
-
-// ─── Default Mock Data ─────────────────────────────────────────────────────
-
-const DEFAULT_REASONING: ReasoningStep[] = [
-  { id: 'r1', label: 'Fleet health baseline', detail: 'Aggregating gateway telemetry across 6 regions, 12,489 devices.', confidence: 0.97, status: 'complete' },
-  { id: 'r2', label: 'Anomaly detection', detail: 'Applied 14-day rolling baseline. No statistically significant deviations.', confidence: 0.94, status: 'complete' },
-  { id: 'r3', label: 'Risk correlation', detail: 'Cross-referencing firmware versions with connection-drop patterns.', confidence: 0.91, status: 'complete' },
-];
-
-const DEFAULT_ACTIONS: BackendAction[] = [
-  { id: 'a1', label: 'Queried telemetry store', status: 'success', timestamp: '2 min ago' },
-  { id: 'a2', label: 'Computed health scores', status: 'success', timestamp: '1 min ago' },
-  { id: 'a3', label: 'Generated recommendations', status: 'success', timestamp: 'just now' },
-];
-
-const DEFAULT_AUDIT: AuditEntry[] = [
-  { id: 'au1', action: 'Fleet health query executed', actor: 'AI Assistant', timestamp: '10:42 AM', type: 'query' },
-  { id: 'au2', action: 'Telemetry data aggregated (6 regions)', actor: 'System', timestamp: '10:42 AM', type: 'system' },
-  { id: 'au3', action: 'Health scores computed for 12,489 gateways', actor: 'System', timestamp: '10:42 AM', type: 'system' },
-  { id: 'au4', action: 'Firmware regression check passed', actor: 'AI Engine', timestamp: '10:41 AM', type: 'query' },
-  { id: 'au5', action: 'Channel utilization scan completed', actor: 'System', timestamp: '10:40 AM', type: 'system' },
-  { id: 'au6', action: 'Alert threshold breached: East region', actor: 'Monitor', timestamp: '10:38 AM', type: 'alert' },
-];
-
-const ACTIVE_REASONING: ReasoningStep[] = [
-  { id: 'ar1', label: 'Parsing natural language query', detail: 'Extracting entities, intent, and scope constraints.', confidence: 1.0, status: 'complete' },
-  { id: 'ar2', label: 'Resolving data sources', detail: 'Mapping query to telemetry, topology, and event data.', status: 'in-progress' },
-  { id: 'ar3', label: 'Correlation analysis', detail: 'Pending: Multi-dimensional correlation.', status: 'pending' },
-  { id: 'ar4', label: 'Generating insights', detail: 'Pending: Synthesizing findings and recommendations.', status: 'pending' },
-];
 
 // ─── Sub-Components ────────────────────────────────────────────────────────
 
@@ -192,9 +141,11 @@ export function WorkspaceRightPanel({
   backendActions,
   auditEntries,
 }: WorkspaceRightPanelProps) {
-  const steps = reasoningSteps ?? (isActive ? ACTIVE_REASONING : DEFAULT_REASONING);
-  const actions = backendActions ?? DEFAULT_ACTIONS;
-  const audit = auditEntries ?? DEFAULT_AUDIT;
+  const experience = getWorkspaceExperience(workspaceId);
+  const steps =
+    reasoningSteps ?? (isActive ? experience.reasoning.activeSteps : experience.reasoning.idleSteps);
+  const actions = backendActions ?? experience.reasoning.backendActions;
+  const audit = auditEntries ?? experience.reasoning.auditEntries;
 
   const accentColor =
     workspaceId === 'operations' ? 'var(--primary)' :

@@ -2,7 +2,7 @@
  * Workspace Definitions
  *
  * Defines the three primary work modes in the platform:
- * - Operations: Fleet-level operations, incidents, cohorts
+ * - Fleet Intelligence: Fleet-level operations, incidents, cohorts
  * - Support: Case-level work, tickets, subscribers, homes
  * - Growth: Opportunities, segments, upsell (reserved for future)
  */
@@ -32,84 +32,84 @@ export interface WorkspaceDefinition {
 export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
   operations: {
     id: 'operations',
-    name: 'Operations',
-    description: 'Fleet-level operations for incidents, cohorts, and network-wide issues.',
-    tagline: 'Discover and explain fleet-wide risks',
+    name: 'Fleet Intelligence',
+    description: 'AI-discovered fleet patterns, predictive risks, and rollout health across the network.',
+    tagline: 'AI-discovered patterns across your network',
     icon: 'activity',
     primaryObjects: ['incident', 'cohort', 'region', 'organization'],
     exampleScenarios: [
-      'Firmware regression analysis',
-      'DPI & traffic anomaly detection',
-      'Regional outage investigation',
-      'Fleet health analysis',
+      'FW 2.1.3 memory regression',
+      'Region East channel congestion',
+      'Service deployment anomaly',
+      'Predictive fleet health scan',
     ],
     accentColor: 'var(--ambient-blue)',
     isImplemented: true,
     recentQuestions: [
-      'Show gateways with connection drops in the last 24 hours',
-      'Compare streaming vs gaming traffic across Europe',
-      'Fleet health summary for APAC region',
+      'Show the cohorts trending toward degradation this week',
+      'Which deployments are most at risk over the next 48 hours?',
+      'Compare fleet health vs last week across all regions',
     ],
     topQuestions: [
-      'Show me all active outages across regions',
-      'Analyze firmware regression across fleet',
-      'Compare L7 traffic anomalies this week',
-      'Run a fleet health analysis',
+      'What anomaly patterns has AI detected this week that I have not seen yet?',
+      'Correlate offline events with firmware 2.1 and show if this is fleet-wide',
+      'Predict which cohorts will hit memory pressure in the next 7 days',
+      'Show service deployment health for the last 48 hours',
     ],
   },
 
   support: {
     id: 'support',
     name: 'Support',
-    description: 'Case-level work for tickets, subscribers, homes, and individual gateway support.',
-    tagline: 'Handle cases and location issues',
+    description: 'AI-driven diagnosis, zero-touch resolution, and escalation control for active cases.',
+    tagline: 'AI-driven diagnosis and zero-touch resolution',
     icon: 'users',
     primaryObjects: ['case', 'location', 'home', 'gateway'],
     exampleScenarios: [
       'Autonomous Wi-Fi Recovery',
       'Critical Session Protection',
-      'Subscriber Troubleshooting',
-      'Gateway Diagnostics',
+      'Firmware Regression Investigation',
+      'User-Reported Slow Speed',
     ],
     accentColor: 'var(--ambient-cyan)',
     isImplemented: true,
     recentQuestions: [
-      'Troubleshoot ticket TKT-4821 for subscriber John Smith',
-      'Run diagnostics on gateway GW-7834-HOME',
-      'Show health summary for subscriber SUB-1234',
+      'Show the cases AI resolved today without human intervention',
+      'Which open cases already have a high-confidence AI root cause?',
+      'Show me the repeat offender homes from this week',
     ],
     topQuestions: [
-      'Investigate intermittent connection drops on SUB-1234',
-      'Detect and resolve Wi-Fi interference on home gateway',
-      'Protect active video call sessions during peak congestion',
-      'Show me the home overview for SUB-1234',
+      'Show cases AI resolved without human intervention this week',
+      'This subscriber reports slow internet. What did AI find?',
+      'Which open cases have AI-generated root cause with high confidence?',
+      'Show pending validations for fixes AI already applied',
     ],
   },
 
   growth: {
     id: 'growth',
     name: 'Growth',
-    description: 'Growth opportunities, segments, upsell campaigns, and VAS promotion.',
-    tagline: 'Identify upsell and churn prevention opportunities',
+    description: 'Predictive insights for revenue expansion, churn prevention, and offer targeting.',
+    tagline: 'Predictive insights for revenue and retention',
     icon: 'trending-up',
     primaryObjects: ['opportunity', 'segment', 'offer', 'campaign'],
     exampleScenarios: [
-      'Pre-Churn Rescue / Plan Upgrade',
+      'Pre-Churn Rescue',
       'Bandwidth Upsell Opportunities',
-      'VAS Device Fingerprint Targeting',
+      'Premium Wi-Fi Conversion',
     ],
     accentColor: 'var(--ambient-warm)',
     isImplemented: true,
     recentQuestions: [
-      'Identify households with high latency and no support tickets',
-      'Show users saturating WAN bandwidth >2 hours/day',
-      'Find households eligible for parental control subscription',
+      'Show this week’s top 10 upsell candidates',
+      'Which subscribers are at churn risk with no open tickets?',
+      'Show the Premium Wi-Fi conversion funnel',
     ],
     topQuestions: [
-      'Rank subscribers by churn risk score',
-      'Find bandwidth saturation opportunities for upsell',
-      'Identify VAS cross-sell targets by device fingerprint',
-      'Forecast revenue impact of plan upgrade campaign',
+      'Which subscribers will likely churn in the next 30 days?',
+      'Predict upsell conversion rate if we target bandwidth-constrained households',
+      'What is the projected revenue impact of Premium Wi-Fi expansion?',
+      'Which segments have the highest upsell confidence this month?',
     ],
   },
 };
@@ -126,75 +126,75 @@ export const WORKSPACE_STARTER_TASKS: Record<WorkspaceId, WorkspaceStarterTask[]
   operations: [
     {
       id: 'ops-1',
-      title: 'Investigate Connection Drops',
-      description: 'Find gateways with unusual connection drops and correlate with firmware versions',
-      prompt: 'Show me all home gateways with unusual connection drops in the last 24 hours, group failing devices by MAC vendor, and correlate with recent firmware updates.',
+      title: 'FW 2.1.3 Memory Regression',
+      description: 'Investigate the emerging memory trend AI detected in the latest firmware cohort',
+      prompt: 'Investigate the FW 2.1.3 memory regression across impacted cohorts and show projected critical risk over the next 5 days.',
     },
     {
       id: 'ops-2',
-      title: 'Analyze Traffic Anomalies',
-      description: 'Compare L7 streaming vs gaming traffic and highlight TLS classification gaps',
-      prompt: 'Compare L7 streaming vs gaming traffic across Europe this week and highlight anomalies in TLS traffic classification.',
+      title: 'Region East Channel Congestion',
+      description: 'Explain the correlated congestion pattern AI found across impacted cohorts',
+      prompt: 'Explain the Region East channel congestion pattern, highlight impacted cohorts, and compare it to the previous baseline.',
     },
     {
       id: 'ops-3',
-      title: 'Fleet Health Overview',
-      description: 'Get a summary of current fleet health, active alerts, and recommended actions',
-      prompt: 'Run a fleet health analysis and show me the current status across all regions.',
+      title: 'Service Deployment Anomaly',
+      description: 'Review platform-specific install failures during the latest service rollout',
+      prompt: 'Review parental controls deployment health, isolate platform-specific failures, and recommend the next remediation step.',
     },
     {
       id: 'ops-4',
-      title: 'Regional Outage Check',
-      description: 'View active outages and incidents affecting any region',
-      prompt: 'Show me active outages across all regions.',
+      title: 'Predictive Fleet Health Scan',
+      description: 'See which cohorts and rollouts are likely to degrade next',
+      prompt: 'Find the cohorts trending toward degradation in the next 7 days and explain what AI is seeing.',
     },
   ],
 
   support: [
     {
       id: 'sup-1',
-      title: 'Troubleshoot Ticket',
-      description: 'Start with a ticket number to investigate subscriber issues',
-      prompt: 'I need to troubleshoot ticket TKT-4821 for subscriber John Smith.',
+      title: 'Cases AI Resolved Today',
+      description: 'Review the zero-touch cases AI closed without human intervention',
+      prompt: 'Show the cases AI fully resolved today and summarize what was fixed.',
     },
     {
       id: 'sup-2',
-      title: 'Subscriber Health Check',
-      description: 'Review gateway health and service status for a subscriber',
-      prompt: 'Show me the health summary for subscriber SUB-1234.',
+      title: 'Cases Needing Review',
+      description: 'Surface the cases AI escalated for a human decision',
+      prompt: 'Show the open cases needing human attention and explain why AI escalated them.',
     },
     {
       id: 'sup-3',
-      title: 'Gateway Diagnostics',
-      description: 'Run diagnostics on a specific home gateway',
-      prompt: 'Run diagnostics on gateway GW-7834-HOME.',
+      title: 'Repeat Offender Homes',
+      description: 'Find the homes that keep reappearing in the support queue',
+      prompt: 'Find the repeat offender homes this week and explain the recurring issue pattern.',
     },
     {
       id: 'sup-4',
-      title: 'View Home Overview',
-      description: 'See the static dashboard for a subscriber home',
-      prompt: 'Show me the home overview for SUB-1234.',
+      title: 'Pending Validations',
+      description: 'Check the fixes AI applied that still need confirmation',
+      prompt: 'Show AI fixes waiting for validation and explain what still needs to be confirmed.',
     },
   ],
 
   growth: [
     {
       id: 'grw-1',
-      title: 'Pre-Churn Rescue',
-      description: 'Identify subscribers at risk of churning with no support tickets',
-      prompt: 'Identify households with high latency in streaming/gaming over the last 14 days with no support tickets. Rank by churn risk.',
+      title: 'Top Upsell Candidates',
+      description: 'Rank the strongest upsell opportunities AI found this week',
+      prompt: 'Show this week’s top 10 upsell candidates and explain why AI ranked them highest.',
     },
     {
       id: 'grw-2',
-      title: 'Bandwidth Upsell',
-      description: 'Find users saturating WAN bandwidth who need plan upgrades',
-      prompt: 'Show users saturating WAN bandwidth >2 hours/day due to video calls and 4K streaming.',
+      title: 'Churn Risk With No Tickets',
+      description: 'Surface declining subscribers before they ask for help',
+      prompt: 'Show subscribers at churn risk who have no open tickets and explain the early warning signals.',
     },
     {
       id: 'grw-3',
-      title: 'VAS Opportunity',
-      description: 'Find households eligible for value-added services',
-      prompt: "Find households with gaming consoles or children's devices but no parental control subscription.",
+      title: 'Premium Wi-Fi Funnel',
+      description: 'Review conversion and drop-off for the current Premium Wi-Fi motion',
+      prompt: 'Show the Premium Wi-Fi conversion funnel and highlight the main drop-off stages.',
     },
   ],
 };
@@ -213,40 +213,40 @@ export function getWorkspaceContext(workspaceId: WorkspaceId): WorkspaceContext 
     case 'operations':
       return {
         workspace: workspaceId,
-        primaryScope: 'fleet, region, organization',
+        primaryScope: 'fleet, region, organization, cohort',
         capabilities: [
           'Fleet-wide incident detection',
           'Cohort analysis and correlation',
           'Regional outage management',
           'Firmware regression analysis',
           'Traffic anomaly detection',
-          'Cross-tenant comparisons',
+          'Predictive rollout risk scoring',
         ],
       };
 
     case 'support':
       return {
         workspace: workspaceId,
-        primaryScope: 'ticket, subscriber, home, gateway',
+        primaryScope: 'subscriber, home, gateway, device',
         capabilities: [
           'Ticket-based troubleshooting',
           'Subscriber health investigation',
-          'Home gateway diagnostics',
+          'Home and gateway diagnostics',
           'Device-level remediation',
-          'Service plan verification',
-          'Topology and device inventory',
+          'Post-fix validation',
+          'Escalation risk review',
         ],
       };
 
     case 'growth':
       return {
         workspace: workspaceId,
-        primaryScope: 'segment, opportunity, campaign',
+        primaryScope: 'segment, campaign, subscriber',
         capabilities: [
           'Churn risk scoring and identification',
           'Upsell opportunity detection',
           'Bandwidth saturation analysis',
-          'VAS cross-sell recommendations',
+          'Offer and campaign optimization',
           'Revenue impact forecasting',
           'Campaign targeting',
         ],

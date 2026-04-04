@@ -26,6 +26,19 @@ import {
   getParentScopeForDevice,
   normalizeScopeSearchValue,
 } from '../lib/scope-data';
+import {
+  ALL_GROWTH_SCOPE_ACTIONS as ALL_GROWTH_SCOPE_ACTIONS_DATA,
+  getScopeCommandOptionsForWorkspace,
+  getWorkspaceDefaultScope,
+  getWorkspaceExperience,
+  getWorkspaceScopeActions,
+  getWorkspaceScopePaletteContextLabel,
+  getWorkspaceScopePalettePlaceholder,
+  getWorkspaceScopePaletteStateForTarget,
+  getWorkspaceScopeTagLabel,
+  GROWTH_SCENARIOS as GROWTH_SCENARIOS_DATA,
+  parseScopeCommandInputForWorkspace,
+} from '../lib/workspace-experience';
 
 // Types
 interface Message {
@@ -42,58 +55,7 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Growth-specific scenario prompts
-export const GROWTH_SCENARIOS = [
-  {
-    id: 'grw-churn',
-    title: 'Pre-Churn Rescue',
-    description: 'Identify subscribers at risk of churning with no support tickets',
-    query: 'Identify households with high latency in streaming/gaming over the last 14 days with no support tickets. Rank by churn risk.',
-    icon: 'alert-triangle',
-  },
-  {
-    id: 'grw-upsell',
-    title: 'Bandwidth Upsell',
-    description: 'Find users saturating WAN bandwidth who need plan upgrades',
-    query: 'Show users saturating WAN bandwidth >2 hours/day due to video calls and 4K streaming.',
-    icon: 'trending-up',
-  },
-  {
-    id: 'grw-vas',
-    title: 'VAS Opportunity',
-    description: 'Find households eligible for value-added services',
-    query: "Find households with gaming consoles or children's devices but no parental control subscription.",
-    icon: 'gift',
-  },
-];
-
-// Growth-specific quick actions
-export const GROWTH_ACTIONS = [
-  {
-    id: 'grw-fleet-churn',
-    title: 'Fleet Churn Risk',
-    description: 'Get a summary of churn risk across all segments',
-    prompt: 'Show me the overall churn risk summary across all segments.',
-  },
-  {
-    id: 'grw-revenue',
-    title: 'Revenue Opportunities',
-    description: 'Identify top revenue expansion opportunities',
-    prompt: 'Show me the top revenue expansion opportunities this quarter.',
-  },
-  {
-    id: 'grw-segments',
-    title: 'Segment Analysis',
-    description: 'Analyze customer segments for targeting',
-    prompt: 'Analyze customer segments for upsell and cross-sell targeting.',
-  },
-  {
-    id: 'grw-campaigns',
-    title: 'Campaign Performance',
-    description: 'Review ongoing campaign results and ROI',
-    prompt: 'Show me the performance of current marketing campaigns.',
-  },
-];
+export const GROWTH_SCENARIOS = GROWTH_SCENARIOS_DATA;
 
 // Scope-specific actions for Growth
 interface ScopeQuickAction {
@@ -104,201 +66,12 @@ interface ScopeQuickAction {
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
-  const getScopeDisplayLabel = (scope: ScopeSelection) => {
-    switch (scope.level) {
-      case 'all':
-        return 'all tenants';
-      case 'region':
-        return REGION_LABELS[scope.region ?? ''] ?? 'this region';
-      case 'organization':
-        return ORGANIZATION_LABELS[scope.organization ?? ''] ?? 'this organization';
-      case 'subscriber': {
-        const subscriberName = SUBSCRIBER_LABELS[scope.subscriber ?? ''];
-        if (subscriberName && scope.subscriber) {
-          return `${subscriberName} (${scope.subscriber})`;
-        }
-        return 'this subscriber';
-      }
-      case 'device': {
-        const subscriberId = scope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
-        const subscriberName = SUBSCRIBER_LABELS[subscriberId] ?? DEFAULT_SUBSCRIBER_NAME;
-        const scopedDevices = getDevicesForSubscriber(subscriberId);
-        const fallbackDevice = scopedDevices[0] ?? { id: 'GW-7834-HOME', name: 'Home' };
-        const selectedDevice =
-          scopedDevices.find((device) => device.id === scope.device) ?? fallbackDevice;
-        return `${subscriberName} • ${getGatewaySiteLabel(subscriberName, selectedDevice.name)} Gateway`;
-      }
-      default:
-        return 'the current scope';
-    }
-  };
-
-  const scopeLabel = getScopeDisplayLabel(scope);
-
-  switch (scope.level) {
-    case 'all':
-      return [
-        {
-          id: 'all-growth-ops',
-          title: 'Show fleet growth opportunities',
-          description: 'View all upsell candidates across the fleet.',
-          prompt: 'Show all upsell candidates across the fleet',
-        },
-        {
-          id: 'all-churn-risk',
-          title: 'Show churn risk distribution',
-          description: 'Analyze churn risk across all regions.',
-          prompt: 'Analyze churn risk across all regions',
-        },
-        {
-          id: 'all-revenue',
-          title: 'Review revenue metrics',
-          description: 'Show current revenue metrics and growth trends.',
-          prompt: 'Show current revenue metrics and growth trends',
-        },
-        {
-          id: 'all-segments',
-          title: 'Analyze segments',
-          description: 'Show customer segment breakdown.',
-          prompt: 'Show customer segment breakdown',
-        },
-      ];
-    case 'region':
-      return [
-        {
-          id: 'region-opportunities',
-          title: 'Show region opportunities',
-          description: 'Show growth opportunities in the selected region.',
-          prompt: `Show growth opportunities in ${scopeLabel}`,
-        },
-        {
-          id: 'region-churn',
-          title: 'Region churn analysis',
-          description: 'Analyze churn risk in the selected region.',
-          prompt: `Analyze churn risk in ${scopeLabel}`,
-        },
-        {
-          id: 'region-revenue',
-          title: 'Revenue forecast',
-          description: 'Show revenue forecast for the selected region.',
-          prompt: `Show revenue forecast for ${scopeLabel}`,
-        },
-        {
-          id: 'region-targeting',
-          title: 'Segment targeting',
-          description: 'Recommend segment targeting for the selected region.',
-          prompt: `Recommend segment targeting for ${scopeLabel}`,
-        },
-      ];
-    case 'organization':
-      return [
-        {
-          id: 'org-upsell',
-          title: 'Org opportunities',
-          description: 'Show upsell opportunities for this organization.',
-          prompt: `Show upsell opportunities for ${scopeLabel}`,
-        },
-        {
-          id: 'org-satisfaction',
-          title: 'Subscriber satisfaction',
-          description: 'Analyze subscriber satisfaction for this organization.',
-          prompt: `Analyze subscriber satisfaction for ${scopeLabel}`,
-        },
-        {
-          id: 'org-revenue',
-          title: 'Revenue analysis',
-          description: 'Show revenue breakdown for this organization.',
-          prompt: `Show revenue breakdown for ${scopeLabel}`,
-        },
-        {
-          id: 'org-campaigns',
-          title: 'Campaign results',
-          description: 'Review campaign results for this organization.',
-          prompt: `Review campaign results for ${scopeLabel}`,
-        },
-      ];
-    case 'subscriber':
-      return [
-        {
-          id: 'sub-upsell',
-          title: 'Upsell potential',
-          description: 'Show upsell potential for this subscriber.',
-          prompt: `Show upsell potential for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-utilization',
-          title: 'Service utilization',
-          description: 'Analyze service utilization for this subscriber.',
-          prompt: `Analyze service utilization for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-churn',
-          title: 'Churn indicators',
-          description: 'Show churn risk indicators for this subscriber.',
-          prompt: `Show churn risk indicators for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-vas',
-          title: 'VAS recommendations',
-          description: 'Recommend value-added services for this subscriber.',
-          prompt: `Recommend value-added services for ${scopeLabel}`,
-        },
-      ];
-    case 'device':
-      return [
-        {
-          id: 'device-usage',
-          title: 'Usage patterns',
-          description: 'Show usage patterns for this gateway.',
-          prompt: `Show usage patterns for ${scopeLabel}`,
-        },
-        {
-          id: 'device-bandwidth',
-          title: 'Bandwidth utilization',
-          description: 'Analyze bandwidth utilization for this gateway.',
-          prompt: `Analyze bandwidth utilization for ${scopeLabel}`,
-        },
-        {
-          id: 'device-upgrade',
-          title: 'Upgrade eligibility',
-          description: 'Check upgrade eligibility for this gateway.',
-          prompt: `Check upgrade eligibility for ${scopeLabel}`,
-        },
-        {
-          id: 'device-profile',
-          title: 'Device profiling',
-          description: 'Profile connected devices for this gateway.',
-          prompt: `Profile connected devices for ${scopeLabel}`,
-        },
-      ];
-    default:
-      return [];
-  }
+  return getWorkspaceScopeActions('growth', scope);
 }
 
 /** All scope action IDs used by this workspace (for settings management) */
-export const ALL_GROWTH_SCOPE_ACTIONS: ScopeQuickAction[] = [
-  { id: 'all-growth-ops', title: 'Show fleet growth opportunities', description: 'View all upsell candidates across the fleet', prompt: 'Show all upsell candidates' },
-  { id: 'all-churn-risk', title: 'Show churn risk distribution', description: 'Analyze churn risk across all regions', prompt: 'Analyze churn risk' },
-  { id: 'all-revenue', title: 'Review revenue metrics', description: 'Show current revenue metrics and growth trends', prompt: 'Show revenue metrics' },
-  { id: 'all-segments', title: 'Analyze segments', description: 'Show customer segment breakdown', prompt: 'Show segment breakdown' },
-  { id: 'region-opportunities', title: 'Show region opportunities', description: 'Show growth opportunities in the selected region', prompt: 'Show region opportunities' },
-  { id: 'region-churn', title: 'Region churn analysis', description: 'Analyze churn risk in the selected region', prompt: 'Analyze region churn' },
-  { id: 'region-revenue', title: 'Revenue forecast', description: 'Show revenue forecast for the selected region', prompt: 'Show revenue forecast' },
-  { id: 'region-targeting', title: 'Segment targeting', description: 'Recommend segment targeting for the selected region', prompt: 'Recommend targeting' },
-  { id: 'org-upsell', title: 'Org opportunities', description: 'Show upsell opportunities for this organization', prompt: 'Show org upsell opportunities' },
-  { id: 'org-satisfaction', title: 'Subscriber satisfaction', description: 'Analyze subscriber satisfaction for this organization', prompt: 'Analyze satisfaction' },
-  { id: 'org-revenue', title: 'Revenue analysis', description: 'Show revenue breakdown for this organization', prompt: 'Show revenue breakdown' },
-  { id: 'org-campaigns', title: 'Campaign results', description: 'Review campaign results for this organization', prompt: 'Review campaigns' },
-  { id: 'sub-upsell', title: 'Upsell potential', description: 'Show upsell potential for this subscriber', prompt: 'Show upsell potential' },
-  { id: 'sub-utilization', title: 'Service utilization', description: 'Analyze service utilization for this subscriber', prompt: 'Analyze utilization' },
-  { id: 'sub-churn', title: 'Churn indicators', description: 'Show churn risk indicators for this subscriber', prompt: 'Show churn indicators' },
-  { id: 'sub-vas', title: 'VAS recommendations', description: 'Recommend value-added services for this subscriber', prompt: 'Recommend VAS' },
-  { id: 'device-usage', title: 'Usage patterns', description: 'Show usage patterns for this gateway', prompt: 'Show usage patterns' },
-  { id: 'device-bandwidth', title: 'Bandwidth utilization', description: 'Analyze bandwidth utilization for this gateway', prompt: 'Analyze bandwidth' },
-  { id: 'device-upgrade', title: 'Upgrade eligibility', description: 'Check upgrade eligibility for this gateway', prompt: 'Check upgrade eligibility' },
-  { id: 'device-profile', title: 'Device profiling', description: 'Profile connected devices for this gateway', prompt: 'Profile devices' },
-];
+export const ALL_GROWTH_SCOPE_ACTIONS: ScopeQuickAction[] =
+  ALL_GROWTH_SCOPE_ACTIONS_DATA;
 
 // Scope Palette Types
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -558,6 +331,7 @@ function getScopeCommandOptions(
 
 export function GrowthWorkspace() {
   const shouldReduceMotion = useReducedMotion();
+  const experience = useMemo(() => getWorkspaceExperience('growth'), []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -567,12 +341,14 @@ export function GrowthWorkspace() {
   const [isFocused, setIsFocused] = useState(false);
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
-  const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
+  const [currentScope, setCurrentScope] = useState<ScopeSelection>(
+    getWorkspaceDefaultScope('growth'),
+  );
   const [hasInteracted, setHasInteracted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Growth. I can help you identify upsell opportunities, prevent churn, and target value-added services. What would you like to explore today?`,
+      message: experience.initialMessage,
       timestamp: getTimestamp(),
     },
   ]);
@@ -584,7 +360,11 @@ export function GrowthWorkspace() {
 
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
-    getScopePaletteStateForTarget(null, { level: 'all' }),
+    getWorkspaceScopePaletteStateForTarget(
+      'growth',
+      null,
+      getWorkspaceDefaultScope('growth'),
+    ),
   );
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
@@ -598,10 +378,19 @@ export function GrowthWorkspace() {
   }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
 
   // Scope command parsing
-  const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
+  const parsedScopeCommand = useMemo(
+    () => parseScopeCommandInputForWorkspace(input),
+    [input],
+  );
   const scopePaletteQuery = useMemo(() => parsedScopeCommand?.filter ?? '', [parsedScopeCommand]);
   const scopeCommandOptions = useMemo(
-    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery, currentScope),
+    () =>
+      getScopeCommandOptionsForWorkspace(
+        'growth',
+        scopePaletteState,
+        scopePaletteQuery,
+        currentScope,
+      ),
     [currentScope, scopePaletteQuery, scopePaletteState],
   );
   const isScopeCommandMode = input.startsWith('/');
@@ -614,10 +403,18 @@ export function GrowthWorkspace() {
   // Update scope palette state based on command
   useEffect(() => {
     if (!isScopeCommandMode) {
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('growth', null, currentScope),
+      );
       return;
     }
-    setScopePaletteState(getScopePaletteStateForTarget(parsedScopeCommand?.command ?? null, currentScope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget(
+        'growth',
+        parsedScopeCommand?.command ?? null,
+        currentScope,
+      ),
+    );
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
   // Auto-scroll
@@ -701,7 +498,9 @@ export function GrowthWorkspace() {
   const applyScopeChange = (scope: ScopeSelection) => {
     setInput('');
     setActiveCommandIndex(0);
-    setScopePaletteState(getScopePaletteStateForTarget(null, scope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget('growth', null, scope),
+    );
     handleScopeChange(scope);
   };
 
@@ -763,7 +562,9 @@ export function GrowthWorkspace() {
       event.preventDefault();
       setInput('');
       setActiveCommandIndex(0);
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('growth', null, currentScope),
+      );
       return;
     }
 
@@ -773,7 +574,9 @@ export function GrowthWorkspace() {
       event.preventDefault();
 
       if (scopePaletteState.step === 'region') {
-        setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+        setScopePaletteState(
+          getWorkspaceScopePaletteStateForTarget('growth', null, currentScope),
+        );
         return;
       }
 
@@ -1107,7 +910,7 @@ export function GrowthWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    {experience.scenarioHeading}
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
@@ -1188,17 +991,14 @@ export function GrowthWorkspace() {
                     <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
+                      <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
+                        {experience.scopeActionHeading}
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                        ·
+                      </span>
                       <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                        {(() => {
-                          switch (currentScope.level) {
-                            case 'all': return 'ALL TENANTS (FLEET)';
-                            case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'REGION';
-                            case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'ORGANIZATION';
-                            case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'SUBSCRIBER';
-                            case 'device': return 'GATEWAY DEVICE';
-                            default: return 'UNKNOWN';
-                          }
-                        })()}
+                        {getWorkspaceScopeTagLabel('growth', currentScope)}
                       </span>
                       <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
                         &middot; Type / to change
@@ -1246,7 +1046,7 @@ export function GrowthWorkspace() {
                     onKeyDown={handleInputKeyDown}
                     onFocus={() => { setIsFocused(true); setSuppressSuggestions(false); }}
                     onBlur={() => setIsFocused(false)}
-                    placeholder="Ask about growth opportunities, churn prevention, or upsell targeting... (Type / to change scope)"
+                    placeholder="Ask about segments, campaigns, or churn risk... (Type / to change scope)"
                     className="w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm transition-all"
                     style={{
                       background: 'var(--surface-raised)',
@@ -1343,11 +1143,11 @@ export function GrowthWorkspace() {
                         </div>
                         <div className="border-b px-3 py-2 text-[11px]" style={{ borderColor: 'var(--border-subtle)' }}>
                           <span className="font-medium" style={{ color: 'var(--foreground)' }}>
-                            {getScopePalettePlaceholder(scopePaletteState)}
+                            {getWorkspaceScopePalettePlaceholder('growth', scopePaletteState)}
                           </span>
-                          {getScopePaletteContextLabel(scopePaletteState) && (
+                          {getWorkspaceScopePaletteContextLabel('growth', scopePaletteState) && (
                             <span className="ml-2" style={{ color: 'var(--neutral-400)' }}>
-                              {getScopePaletteContextLabel(scopePaletteState)}
+                              {getWorkspaceScopePaletteContextLabel('growth', scopePaletteState)}
                             </span>
                           )}
                         </div>

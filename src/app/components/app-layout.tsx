@@ -48,14 +48,21 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
     { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
 
-  const workspaceItems = [
-    { path: '/operations', label: 'Operations', icon: Activity, id: 'operations' },
+  const workspaceItems: Array<{
+    path: string;
+    label: string;
+    icon: typeof Activity;
+    id: 'operations' | 'support' | 'growth';
+  }> = [
+    { path: '/operations', label: 'Fleet Intelligence', icon: Activity, id: 'operations' },
     { path: '/support', label: 'Support', icon: Users, id: 'support' },
     { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth' },
   ];
 
   // Check if current page should show workspace switcher
   const isWorkspacePage = location.pathname === '/operations' || location.pathname === '/support' || location.pathname === '/growth';
+  const activeWorkspace =
+    workspaceItems.find((item) => item.path === location.pathname)?.id ?? 'operations';
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (
@@ -96,7 +103,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
                   <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: 'var(--neutral-400)' }} />
                   <input
                     type="text"
-                    placeholder="Search subscribers, devices, events..."
+                    placeholder="Search entities, scopes, or events..."
                     className="h-8 w-full rounded-lg border pl-9 pr-3 text-sm transition-all"
                     style={{
                       borderColor: 'var(--border)',
@@ -131,7 +138,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5">
                   <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>ops-admin@acme.com</p>
-                  <p className="text-xs" style={{ color: 'var(--neutral-500)' }}>Operations Admin</p>
+                  <p className="text-xs" style={{ color: 'var(--neutral-500)' }}>Fleet Operations Admin</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
@@ -159,6 +166,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
                     value={currentScope}
                     onChange={handleScopeChange}
                     compact={isMobile}
+                    workspaceId={activeWorkspace}
                   />
                 </div>
 

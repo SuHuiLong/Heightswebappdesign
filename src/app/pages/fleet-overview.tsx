@@ -257,7 +257,7 @@ export function FleetOverview() {
                 style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
               >
                 <Activity className="h-3 w-3" />
-                Open Operations
+                Open Fleet Intelligence
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
@@ -371,7 +371,7 @@ export function FleetOverview() {
             </h3>
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'Run Fleet Health Analysis', to: '/operations', icon: Activity },
+                { label: 'Open Fleet Intelligence', to: '/operations', icon: Activity },
                 { label: 'View Active Incidents', to: '/operations', icon: AlertTriangle },
                 { label: 'Support Ticket Queue', to: '/support', icon: CheckCircle2 },
                 { label: 'Growth Opportunities', to: '/growth', icon: TrendingUp },

@@ -28,6 +28,20 @@ import {
   getParentScopeForDevice,
   normalizeScopeSearchValue,
 } from '../lib/scope-data';
+import {
+  ALL_OPS_SCOPE_ACTIONS as ALL_OPS_SCOPE_ACTIONS_DATA,
+  getScopeCommandOptionsForWorkspace,
+  getWorkspaceDefaultScope,
+  getWorkspaceExperience,
+  getWorkspaceScopeActions,
+  getWorkspaceScopeDisplayLabel,
+  getWorkspaceScopePaletteContextLabel,
+  getWorkspaceScopePalettePlaceholder,
+  getWorkspaceScopePaletteStateForTarget,
+  getWorkspaceScopeTagLabel,
+  OPERATIONS_SCENARIOS as OPERATIONS_SCENARIOS_DATA,
+  parseScopeCommandInputForWorkspace,
+} from '../lib/workspace-experience';
 
 // Types
 type ResultMessageType =
@@ -55,62 +69,7 @@ const getTimestamp = () =>
     minute: '2-digit',
   });
 
-// Operations-specific scenario prompts
-export const OPERATIONS_SCENARIOS = [
-  {
-    id: 'ops-firmware',
-    title: 'Firmware Regression',
-    description: 'Find gateways with connection drops correlated to firmware versions',
-    query: 'Show me all home gateways with unusual connection drops in the last 24 hours, group failing devices by MAC vendor, and correlate with recent firmware updates.',
-    icon: 'bug',
-  },
-  {
-    id: 'ops-traffic',
-    title: 'Traffic Anomalies',
-    description: 'Compare L7 streaming vs gaming traffic and highlight TLS classification gaps',
-    query: 'Compare L7 streaming vs gaming traffic across Europe this week and highlight anomalies in TLS traffic classification.',
-    icon: 'activity',
-  },
-  {
-    id: 'ops-forecast',
-    title: 'Cost Forecast',
-    description: 'Forecast next month\'s ingestion cost with growth assumptions',
-    query: 'Forecast next month\'s ingestion cost with 15% device growth.',
-    icon: 'trending-up',
-  },
-];
-
-// Operations-specific quick actions
-export const OPERATIONS_ACTIONS = [
-  {
-    id: 'ops-fleet-health',
-    title: 'Fleet Health Summary',
-    description: 'Get overall fleet health status across all regions',
-    prompt: 'Run a fleet health analysis and show me the current status across all regions.',
-    icon: 'heart',
-  },
-  {
-    id: 'ops-active-incidents',
-    title: 'Active Incidents',
-    description: 'View all currently active incidents and their status',
-    prompt: 'Show me all active incidents across the fleet.',
-    icon: 'alert-triangle',
-  },
-  {
-    id: 'ops-regional-view',
-    title: 'Regional Overview',
-    description: 'Compare health metrics across all regions',
-    prompt: 'Show me a regional breakdown comparing health metrics.',
-    icon: 'globe',
-  },
-  {
-    id: 'ops-cohort-analysis',
-    title: 'Cohort Analysis',
-    description: 'Analyze specific device cohorts for patterns',
-    prompt: 'Analyze the Broadcom device cohort for connection patterns.',
-    icon: 'layers',
-  },
-];
+export const OPERATIONS_SCENARIOS = OPERATIONS_SCENARIOS_DATA;
 
 // Scope-specific actions for Operations
 interface ScopeQuickAction {
@@ -121,201 +80,11 @@ interface ScopeQuickAction {
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
-  const getScopeDisplayLabel = (scope: ScopeSelection) => {
-    switch (scope.level) {
-      case 'all':
-        return 'all tenants';
-      case 'region':
-        return REGION_LABELS[scope.region ?? ''] ?? 'this region';
-      case 'organization':
-        return ORGANIZATION_LABELS[scope.organization ?? ''] ?? 'this organization';
-      case 'subscriber': {
-        const subscriberName = SUBSCRIBER_LABELS[scope.subscriber ?? ''];
-        if (subscriberName && scope.subscriber) {
-          return `${subscriberName} (${scope.subscriber})`;
-        }
-        return 'this subscriber';
-      }
-      case 'device': {
-        const subscriberId = scope.subscriber ?? DEFAULT_SUBSCRIBER_ID;
-        const subscriberName = SUBSCRIBER_LABELS[subscriberId] ?? DEFAULT_SUBSCRIBER_NAME;
-        const scopedDevices = getDevicesForSubscriber(subscriberId);
-        const fallbackDevice = scopedDevices[0] ?? { id: 'GW-7834-HOME', name: 'Home' };
-        const selectedDevice =
-          scopedDevices.find((device) => device.id === scope.device) ?? fallbackDevice;
-        return `${subscriberName} • ${getGatewaySiteLabel(subscriberName, selectedDevice.name)} Gateway`;
-      }
-      default:
-        return 'the current scope';
-    }
-  };
-
-  const scopeLabel = getScopeDisplayLabel(scope);
-
-  switch (scope.level) {
-    case 'all':
-      return [
-        {
-          id: 'all-device-list',
-          title: 'Show fleet device list',
-          description: 'Review gateways, routers, and APs across the fleet.',
-          prompt: 'Show the fleet device list across all tenants',
-        },
-        {
-          id: 'all-outages',
-          title: 'View active outages',
-          description: 'See current outages and impacted zones.',
-          prompt: 'Show all active outages across the fleet',
-        },
-        {
-          id: 'all-bandwidth',
-          title: 'Review bandwidth overview',
-          description: 'Look at aggregate traffic history and usage.',
-          prompt: 'Show the fleet bandwidth overview',
-        },
-        {
-          id: 'all-health',
-          title: 'Run fleet health analysis',
-          description: 'Summarize current health, alerts, and recommended actions.',
-          prompt: 'Run a fleet health analysis',
-        },
-      ];
-    case 'region':
-      return [
-        {
-          id: 'region-devices',
-          title: 'Show region devices',
-          description: 'List devices in the selected region.',
-          prompt: `Show me all devices in ${scopeLabel}`,
-        },
-        {
-          id: 'region-outages',
-          title: 'View regional outages',
-          description: 'Inspect incidents affecting this region.',
-          prompt: `Show active outages in ${scopeLabel}`,
-        },
-        {
-          id: 'region-bandwidth',
-          title: 'Analyze regional bandwidth',
-          description: 'Review usage trends for the selected region.',
-          prompt: `Analyze bandwidth usage in ${scopeLabel}`,
-        },
-        {
-          id: 'region-optimize',
-          title: 'Recommend channel optimization',
-          description: 'Generate optimization actions for this region.',
-          prompt: `Recommend channel optimization for ${scopeLabel}`,
-        },
-      ];
-    case 'organization':
-      return [
-        {
-          id: 'org-health',
-          title: 'Review org health',
-          description: 'Summarize health, alerts, and next actions.',
-          prompt: `Review operational health for ${scopeLabel}`,
-        },
-        {
-          id: 'org-sla',
-          title: 'Check SLA compliance',
-          description: 'Inspect current SLA performance for this organization.',
-          prompt: `Check SLA compliance for ${scopeLabel}`,
-        },
-        {
-          id: 'org-work-orders',
-          title: 'Open work orders',
-          description: 'Review recent work orders and escalations.',
-          prompt: `Show open work orders for ${scopeLabel}`,
-        },
-        {
-          id: 'org-plans',
-          title: 'Review service plans',
-          description: 'Check current plan mix and subscriber plan details.',
-          prompt: `Review service plans for ${scopeLabel}`,
-        },
-      ];
-    case 'subscriber':
-      return [
-        {
-          id: 'sub-gateways',
-          title: 'List gateway devices',
-          description: 'Review all gateway devices under this subscriber.',
-          prompt: `Show gateway devices for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-health',
-          title: 'Review subscriber health',
-          description: 'Summarize gateway health and subscriber-level alerts.',
-          prompt: `Review gateway health for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-topology',
-          title: 'View subscriber topology',
-          description: 'Inspect all gateway locations and connected client segments.',
-          prompt: `Show topology for ${scopeLabel}`,
-        },
-        {
-          id: 'sub-plan',
-          title: 'Review service plan',
-          description: 'Check plan context before drilling into a gateway device.',
-          prompt: `Show the current service plan for ${scopeLabel}`,
-        },
-      ];
-    case 'device':
-      return [
-        {
-          id: 'device-topology',
-          title: 'View gateway topology',
-          description: 'Inspect this gateway and its connected client devices.',
-          prompt: `Show topology for ${scopeLabel}`,
-        },
-        {
-          id: 'device-speed-test',
-          title: 'Run speed test',
-          description: 'Measure current download, upload, and latency for this gateway.',
-          prompt: `Run a speed test for ${scopeLabel}`,
-        },
-        {
-          id: 'device-plan',
-          title: 'Review current plan',
-          description: 'Check service tier, usage, and billing context for this gateway.',
-          prompt: `Show the current service plan for ${scopeLabel}`,
-        },
-        {
-          id: 'device-diagnostics',
-          title: 'Run diagnostics',
-          description: 'Open detailed diagnostic analysis for this gateway.',
-          prompt: `Run diagnostics for ${scopeLabel}`,
-        },
-      ];
-    default:
-      return [];
-  }
+  return getWorkspaceScopeActions('operations', scope);
 }
 
 /** All scope action IDs used by this workspace (for settings management) */
-export const ALL_OPS_SCOPE_ACTIONS: ScopeQuickAction[] = [
-  { id: 'all-device-list', title: 'Show fleet device list', description: 'Review gateways, routers, and APs across the fleet', prompt: 'Show the fleet device list' },
-  { id: 'all-outages', title: 'View active outages', description: 'See current outages and impacted zones', prompt: 'Show all active outages' },
-  { id: 'all-bandwidth', title: 'Review bandwidth overview', description: 'Look at aggregate traffic history and usage', prompt: 'Show bandwidth overview' },
-  { id: 'all-health', title: 'Run fleet health analysis', description: 'Summarize current health, alerts, and recommended actions', prompt: 'Run fleet health analysis' },
-  { id: 'region-devices', title: 'Show region devices', description: 'List devices in the selected region', prompt: 'Show region devices' },
-  { id: 'region-outages', title: 'View regional outages', description: 'Inspect incidents affecting this region', prompt: 'Show regional outages' },
-  { id: 'region-bandwidth', title: 'Analyze regional bandwidth', description: 'Review usage trends for the selected region', prompt: 'Analyze regional bandwidth' },
-  { id: 'region-optimize', title: 'Recommend channel optimization', description: 'Generate optimization actions for this region', prompt: 'Recommend channel optimization' },
-  { id: 'org-health', title: 'Review org health', description: 'Summarize health, alerts, and next actions', prompt: 'Review org health' },
-  { id: 'org-sla', title: 'Check SLA compliance', description: 'Inspect current SLA performance', prompt: 'Check SLA compliance' },
-  { id: 'org-work-orders', title: 'Open work orders', description: 'Review recent work orders and escalations', prompt: 'Show work orders' },
-  { id: 'org-plans', title: 'Review service plans', description: 'Check current plan mix and subscriber plan details', prompt: 'Review service plans' },
-  { id: 'sub-gateways', title: 'List gateway devices', description: 'Review all gateway devices under this subscriber', prompt: 'Show gateway devices' },
-  { id: 'sub-health', title: 'Review subscriber health', description: 'Summarize gateway health and subscriber-level alerts', prompt: 'Review subscriber health' },
-  { id: 'sub-topology', title: 'View subscriber topology', description: 'Inspect all gateway locations and connected client segments', prompt: 'Show subscriber topology' },
-  { id: 'sub-plan', title: 'Review service plan', description: 'Check plan context', prompt: 'Show service plan' },
-  { id: 'device-topology', title: 'View gateway topology', description: 'Inspect this gateway and its connected client devices', prompt: 'Show gateway topology' },
-  { id: 'device-speed-test', title: 'Run speed test', description: 'Measure current download, upload, and latency', prompt: 'Run speed test' },
-  { id: 'device-plan', title: 'Review current plan', description: 'Check service tier, usage, and billing context', prompt: 'Show current plan' },
-  { id: 'device-diagnostics', title: 'Run diagnostics', description: 'Open detailed diagnostic analysis for this gateway', prompt: 'Run diagnostics' },
-];
+export const ALL_OPS_SCOPE_ACTIONS: ScopeQuickAction[] = ALL_OPS_SCOPE_ACTIONS_DATA;
 
 // Scope Palette Types
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -648,6 +417,7 @@ function getScopeCommandOptions(
 
 export function OperationsWorkspace() {
   const shouldReduceMotion = useReducedMotion();
+  const experience = useMemo(() => getWorkspaceExperience('operations'), []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -658,12 +428,14 @@ export function OperationsWorkspace() {
   const [isFocused, setIsFocused] = useState(false);
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
-  const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
+  const [currentScope, setCurrentScope] = useState<ScopeSelection>(
+    getWorkspaceDefaultScope('operations'),
+  );
   const [hasInteracted, setHasInteracted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
-      message: `Welcome to Operations. I can help you investigate fleet-wide incidents, analyze cohorts, and manage network-wide issues. What would you like to focus on today?`,
+      message: experience.initialMessage,
       timestamp: getTimestamp(),
     },
   ]);
@@ -675,7 +447,11 @@ export function OperationsWorkspace() {
 
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
-    getScopePaletteStateForTarget(null, { level: 'all' }),
+    getWorkspaceScopePaletteStateForTarget(
+      'operations',
+      null,
+      getWorkspaceDefaultScope('operations'),
+    ),
   );
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
@@ -689,10 +465,19 @@ export function OperationsWorkspace() {
   }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
 
   // Scope command parsing
-  const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
+  const parsedScopeCommand = useMemo(
+    () => parseScopeCommandInputForWorkspace(input),
+    [input],
+  );
   const scopePaletteQuery = useMemo(() => parsedScopeCommand?.filter ?? '', [parsedScopeCommand]);
   const scopeCommandOptions = useMemo(
-    () => getScopeCommandOptions(scopePaletteState, scopePaletteQuery, currentScope),
+    () =>
+      getScopeCommandOptionsForWorkspace(
+        'operations',
+        scopePaletteState,
+        scopePaletteQuery,
+        currentScope,
+      ),
     [currentScope, scopePaletteQuery, scopePaletteState],
   );
   const isScopeCommandMode = input.startsWith('/');
@@ -705,11 +490,19 @@ export function OperationsWorkspace() {
   // Update scope palette state based on command
   useEffect(() => {
     if (!isScopeCommandMode) {
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+      );
       return;
     }
 
-    setScopePaletteState(getScopePaletteStateForTarget(parsedScopeCommand?.command ?? null, currentScope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget(
+        'operations',
+        parsedScopeCommand?.command ?? null,
+        currentScope,
+      ),
+    );
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
   // Auto-scroll
@@ -806,7 +599,9 @@ export function OperationsWorkspace() {
   const applyScopeChange = (scope: ScopeSelection) => {
     setInput('');
     setActiveCommandIndex(0);
-    setScopePaletteState(getScopePaletteStateForTarget(null, scope));
+    setScopePaletteState(
+      getWorkspaceScopePaletteStateForTarget('operations', null, scope),
+    );
     handleScopeChange(scope);
   };
 
@@ -868,7 +663,9 @@ export function OperationsWorkspace() {
       event.preventDefault();
       setInput('');
       setActiveCommandIndex(0);
-      setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+      setScopePaletteState(
+        getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+      );
       return;
     }
 
@@ -878,7 +675,9 @@ export function OperationsWorkspace() {
       event.preventDefault();
 
       if (scopePaletteState.step === 'region') {
-        setScopePaletteState(getScopePaletteStateForTarget(null, currentScope));
+        setScopePaletteState(
+          getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+        );
         return;
       }
 
@@ -1213,7 +1012,7 @@ export function OperationsWorkspace() {
                 <div className="mb-3 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                   <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                    WHAT YOU CAN ASK
+                    {experience.scenarioHeading}
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
@@ -1294,17 +1093,14 @@ export function OperationsWorkspace() {
                 <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 <div className="flex items-center gap-2">
                   <Activity className="h-3 w-3" style={{ color: 'var(--neutral-500)' }} />
+                  <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
+                    {experience.scopeActionHeading}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
+                    ·
+                  </span>
                   <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                    {(() => {
-                      switch (currentScope.level) {
-                        case 'all': return 'ALL TENANTS (FLEET)';
-                        case 'region': return REGION_LABELS[currentScope.region ?? ''] ?? 'REGION';
-                        case 'organization': return ORGANIZATION_LABELS[currentScope.organization ?? ''] ?? 'ORGANIZATION';
-                        case 'subscriber': return SUBSCRIBER_LABELS[currentScope.subscriber ?? ''] ?? 'SUBSCRIBER';
-                        case 'device': return 'GATEWAY DEVICE';
-                        default: return 'UNKNOWN';
-                      }
-                    })()}
+                    {getWorkspaceScopeTagLabel('operations', currentScope)}
                   </span>
                   <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
                     · Type / to change
@@ -1352,7 +1148,7 @@ export function OperationsWorkspace() {
                     onKeyDown={handleInputKeyDown}
                     onFocus={() => { setIsFocused(true); setSuppressSuggestions(false); }}
                     onBlur={() => setIsFocused(false)}
-                    placeholder="Ask about fleet operations, incidents, or cohorts... (Type / to change scope)"
+                    placeholder="Ask about fleet health, incidents, or patterns... (Type / to change scope)"
                     className="w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm transition-all"
                     style={{
                       background: 'var(--surface-raised)',
@@ -1450,11 +1246,11 @@ export function OperationsWorkspace() {
                         </div>
                         <div className="border-b px-3 py-2 text-[11px]" style={{ borderColor: 'var(--border-subtle)' }}>
                           <span className="font-medium" style={{ color: 'var(--foreground)' }}>
-                            {getScopePalettePlaceholder(scopePaletteState)}
+                            {getWorkspaceScopePalettePlaceholder('operations', scopePaletteState)}
                           </span>
-                          {getScopePaletteContextLabel(scopePaletteState) && (
+                          {getWorkspaceScopePaletteContextLabel('operations', scopePaletteState) && (
                             <span className="ml-2" style={{ color: 'var(--neutral-400)' }}>
-                              {getScopePaletteContextLabel(scopePaletteState)}
+                              {getWorkspaceScopePaletteContextLabel('operations', scopePaletteState)}
                             </span>
                           )}
                         </div>

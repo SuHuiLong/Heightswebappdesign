@@ -6,16 +6,16 @@ import { useReducedMotion } from 'motion/react';
 
 const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
   operations: [
-    'Find gateways with connection drops correlated to firmware versions',
-    'Investigate BGP route flapping across multiple PoPs',
+    'What anomaly patterns has AI detected this week that I have not seen yet?',
+    'Predict which cohorts will hit memory pressure in the next 7 days',
   ],
   support: [
-    'Self-heal Wi-Fi interference by migrating gateway channels',
-    'Protect video call QoS during peak congestion periods',
+    'Show cases AI resolved without human intervention this week',
+    'Which open cases have AI-generated root cause with high confidence?',
   ],
   growth: [
-    'Identify subscribers at risk of churning with no support tickets',
-    'Find households eligible for parental control subscriptions',
+    'Which subscribers will likely churn in the next 30 days?',
+    'Predict upsell conversion rate for bandwidth-constrained households',
   ],
 };
 
@@ -69,7 +69,7 @@ export function WorkspaceWelcome() {
               Heights
             </h1>
             <p className="text-sm" style={{ color: 'var(--neutral-500)' }}>
-              Network Operations Platform
+              AI Network Workspace Platform
             </p>
           </div>
           <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--neutral-400)' }}>
@@ -95,7 +95,7 @@ export function WorkspaceWelcome() {
               </h2>
             </div>
             <p className="max-w-2xl mx-auto text-base" style={{ color: 'var(--neutral-400)' }}>
-              Each workspace is focused on a specific type of work. Ask a question and the system will organize results around it.
+              Each workspace opens with AI-generated priorities instead of a static dashboard, then lets you drill deeper with natural language.
             </p>
           </motion.div>
 

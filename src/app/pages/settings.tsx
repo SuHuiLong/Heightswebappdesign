@@ -1,8 +1,61 @@
+import { useState, useCallback, useEffect } from 'react';
 import { AppLayout } from '../components/app-layout';
-import { Bell, Shield, Palette, Database, Users, Lock } from 'lucide-react';
+import { Bell, Shield, Palette, Database, Users, Lock, LayoutGrid, Eye, EyeOff, Plus, Trash2, Pencil, Check, X, GripVertical, ChevronDown, ChevronRight, MessageSquare, Layers } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { ThemeToggle } from '../components/theme-toggle';
+import {
+  useWorkspaceCardSettings,
+  type WorkspaceKey,
+  type ScenarioCard,
+  type ScopeActionCard,
+} from '../lib/use-workspace-card-settings';
+import { toast } from 'sonner';
+import { OPERATIONS_SCENARIOS, ALL_OPS_SCOPE_ACTIONS } from './workspace-operations';
+import { SUPPORT_SCENARIOS, ALL_SUPPORT_SCOPE_ACTIONS } from './workspace-support';
+import { GROWTH_SCENARIOS, ALL_GROWTH_SCOPE_ACTIONS } from './workspace-growth';
+
+const WORKSPACE_META: Record<WorkspaceKey, { label: string; color: string }> = {
+  operations: { label: 'Operations', color: 'var(--ambient-violet)' },
+  support: { label: 'Support', color: 'var(--ambient-cyan)' },
+  growth: { label: 'Growth', color: 'var(--ambient-amber)' },
+};
+
+function toScenarioCards(items: typeof OPERATIONS_SCENARIOS): ScenarioCard[] {
+  return items.map(s => ({ id: s.id, title: s.title, description: s.description, query: s.query, icon: s.icon ?? 'zap', hidden: false }));
+}
+
+function toScopeActionCards(items: { id: string; title: string; description: string; prompt: string; action?: string }[]): ScopeActionCard[] {
+  return items.map(a => ({ id: a.id, title: a.title, description: a.description, prompt: a.prompt ?? '', action: (a as any).action, hidden: false }));
+}
+
+const DEFAULT_SCENARIOS: Record<WorkspaceKey, ScenarioCard[]> = {
+  operations: toScenarioCards(OPERATIONS_SCENARIOS),
+  support: toScenarioCards(SUPPORT_SCENARIOS),
+  growth: toScenarioCards(GROWTH_SCENARIOS),
+};
+
+const DEFAULT_SCOPE_ACTIONS: Record<WorkspaceKey, ScopeActionCard[]> = {
+  operations: toScopeActionCards(ALL_OPS_SCOPE_ACTIONS),
+  support: toScopeActionCards(ALL_SUPPORT_SCOPE_ACTIONS),
+  growth: toScopeActionCards(ALL_GROWTH_SCOPE_ACTIONS),
+};
+
+const SCOPE_LEVELS = [
+  { prefix: 'all-', label: 'Fleet' },
+  { prefix: 'region-', label: 'Region' },
+  { prefix: 'org-', label: 'Organization' },
+  { prefix: 'sub-', label: 'Subscriber' },
+  { prefix: 'device-', label: 'Device' },
+] as const;
+
+function groupByScopeLevel(cards: ScopeActionCard[]) {
+  return SCOPE_LEVELS.map(({ prefix, label }) => ({
+    level: prefix,
+    label,
+    cards: cards.filter(c => c.id.startsWith(prefix)),
+  })).filter(g => g.cards.length > 0);
+}
 
 export function Settings() {
   return (
@@ -17,133 +70,43 @@ export function Settings() {
           </p>
 
           <div className="space-y-3 lg:space-y-4">
-            {/* Notifications */}
-            <SettingsSection
-              icon={<Bell className="h-5 w-5" />}
-              title="Notifications"
-              description="Manage your alert and notification preferences"
-            >
-              <SettingItem
-                label="Email Notifications"
-                description="Receive email alerts for critical events"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="AI Action Confirmations"
-                description="Require confirmation before AI executes high-risk actions"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="Fleet Status Updates"
-                description="Daily summary of fleet health and metrics"
-                control={<Switch />}
-              />
+            <WorkspaceCardsSection />
+
+            <SettingsSection icon={<Bell className="h-5 w-5" />} title="Notifications" description="Manage your alert and notification preferences">
+              <SettingItem label="Email Notifications" description="Receive email alerts for critical events" control={<Switch defaultChecked />} />
+              <SettingItem label="AI Action Confirmations" description="Require confirmation before AI executes high-risk actions" control={<Switch defaultChecked />} />
+              <SettingItem label="Fleet Status Updates" description="Daily summary of fleet health and metrics" control={<Switch />} />
             </SettingsSection>
 
-            {/* Security & Access */}
-            <SettingsSection
-              icon={<Shield className="h-5 w-5" />}
-              title="Security & Access"
-              description="Control access permissions and security settings"
-            >
-              <SettingItem
-                label="Two-Factor Authentication"
-                description="Add an extra layer of security to your account"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="Session Timeout"
-                description="Automatically log out after 30 minutes of inactivity"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="Audit Log Retention"
-                description="Keep audit logs for 90 days"
-                control={
-                  <Button variant="outline" size="sm">
-                    Configure
-                  </Button>
-                }
-              />
+            <SettingsSection icon={<Shield className="h-5 w-5" />} title="Security & Access" description="Control access permissions and security settings">
+              <SettingItem label="Two-Factor Authentication" description="Add an extra layer of security to your account" control={<Switch defaultChecked />} />
+              <SettingItem label="Session Timeout" description="Automatically log out after 30 minutes of inactivity" control={<Switch defaultChecked />} />
+              <SettingItem label="Audit Log Retention" description="Keep audit logs for 90 days" control={<Button variant="outline" size="sm">Configure</Button>} />
             </SettingsSection>
 
-            {/* AI Preferences */}
-            <SettingsSection
-              icon={<Database className="h-5 w-5" />}
-              title="AI Preferences"
-              description="Customize AI assistant behavior and capabilities"
-            >
-              <SettingItem
-                label="Auto-Remediation"
-                description="Allow AI to automatically fix low-risk issues"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="Proactive Suggestions"
-                description="AI will suggest optimizations based on network patterns"
-                control={<Switch defaultChecked />}
-              />
-              <SettingItem
-                label="Learning Mode"
-                description="AI learns from your feedback and decisions"
-                control={<Switch />}
-              />
+            <SettingsSection icon={<Database className="h-5 w-5" />} title="AI Preferences" description="Customize AI assistant behavior and capabilities">
+              <SettingItem label="Auto-Remediation" description="Allow AI to automatically fix low-risk issues" control={<Switch defaultChecked />} />
+              <SettingItem label="Proactive Suggestions" description="AI will suggest optimizations based on network patterns" control={<Switch defaultChecked />} />
+              <SettingItem label="Learning Mode" description="AI learns from your feedback and decisions" control={<Switch />} />
             </SettingsSection>
 
-            {/* Team & Roles */}
-            <SettingsSection
-              icon={<Users className="h-5 w-5" />}
-              title="Team & Roles"
-              description="Manage team members and role-based access control"
-            >
+            <SettingsSection icon={<Users className="h-5 w-5" />} title="Team & Roles" description="Manage team members and role-based access control">
               <div className="space-y-3">
-                <TeamMember
-                  name="Sarah Johnson"
-                  email="sarah.johnson@acme.com"
-                  role="Admin"
-                />
-                <TeamMember
-                  name="Mike Chen"
-                  email="mike.chen@acme.com"
-                  role="Operator"
-                />
-                <TeamMember
-                  name="Lisa Wong"
-                  email="lisa.wong@acme.com"
-                  role="Viewer"
-                />
-                <Button
-                  variant="outline"
-                  className="mt-4 w-full rounded-[var(--radius-control)]"
-                >
-                  Invite Team Member
-                </Button>
+                <TeamMember name="Sarah Johnson" email="sarah.johnson@acme.com" role="Admin" />
+                <TeamMember name="Mike Chen" email="mike.chen@acme.com" role="Operator" />
+                <TeamMember name="Lisa Wong" email="lisa.wong@acme.com" role="Viewer" />
+                <Button variant="outline" className="mt-4 w-full rounded-[var(--radius-control)]">Invite Team Member</Button>
               </div>
             </SettingsSection>
 
-            {/* Appearance */}
-            <SettingsSection
-              icon={<Palette className="h-5 w-5" />}
-              title="Appearance"
-              description="Customize the look and feel of your interface"
-            >
-              <SettingItem
-                label="Theme"
-                description="Toggle between light and dark mode"
-                control={<ThemeToggle />}
-              />
-              <SettingItem
-                label="Information Density"
-                description="Adjust the amount of information displayed"
-                control={
-                  <select
-                    className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-[12px] text-[color:var(--foreground)] shadow-[var(--shadow-xs)]"
-                  >
-                    <option value="comfortable">Comfortable</option>
-                    <option value="compact">Compact</option>
-                  </select>
-                }
-              />
+            <SettingsSection icon={<Palette className="h-5 w-5" />} title="Appearance" description="Customize the look and feel of your interface">
+              <SettingItem label="Theme" description="Toggle between light and dark mode" control={<ThemeToggle />} />
+              <SettingItem label="Information Density" description="Adjust the amount of information displayed" control={
+                <select className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-[12px] text-[color:var(--foreground)] shadow-[var(--shadow-xs)]">
+                  <option value="comfortable">Comfortable</option>
+                  <option value="compact">Compact</option>
+                </select>
+              } />
             </SettingsSection>
           </div>
         </div>
@@ -151,6 +114,353 @@ export function Settings() {
     </AppLayout>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Workspace Cards — Collapsible Workspace Panels
+   ═══════════════════════════════════════════════════════════ */
+
+function WorkspaceCardsSection() {
+  const cardSettings = useWorkspaceCardSettings();
+
+  return (
+    <SettingsSection
+      icon={<LayoutGrid className="h-5 w-5" />}
+      title="Workspace Cards"
+      description="Show, hide or customize cards in each workspace"
+    >
+      <div className="space-y-1">
+        {(Object.keys(WORKSPACE_META) as WorkspaceKey[]).map(ws => (
+          <WorkspacePanel key={ws} workspace={ws} cardSettings={cardSettings} />
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
+function WorkspacePanel({ workspace, cardSettings }: { workspace: WorkspaceKey; cardSettings: ReturnType<typeof useWorkspaceCardSettings> }) {
+  const [open, setOpen] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const { label, color } = WORKSPACE_META[workspace];
+
+  // Init defaults on mount
+  useEffect(() => {
+    if (!initialized) {
+      if (!cardSettings.getScenarios(workspace)) cardSettings.initScenarios(workspace, DEFAULT_SCENARIOS[workspace]);
+      if (!cardSettings.getScopeActions(workspace)) cardSettings.initScopeActions(workspace, DEFAULT_SCOPE_ACTIONS[workspace]);
+      setInitialized(true);
+    }
+  }, [initialized]);
+
+  const scenarios = cardSettings.getScenarios(workspace) ?? DEFAULT_SCENARIOS[workspace];
+  const scopeActions = cardSettings.getScopeActions(workspace) ?? DEFAULT_SCOPE_ACTIONS[workspace];
+
+  const scVisible = scenarios.filter(c => !c.hidden).length;
+  const scTotal = scenarios.length;
+  const saVisible = scopeActions.filter(c => !c.hidden).length;
+  const saTotal = scopeActions.length;
+
+  return (
+    <div className="rounded-lg border" style={{ borderColor: 'var(--border)' }}>
+      {/* Header — always visible */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left hover:bg-[var(--surface-raised)] transition-colors"
+      >
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+        )}
+        <div
+          className="h-2 w-2 rounded-full shrink-0"
+          style={{ background: color }}
+        />
+        <span className="text-[13px] font-medium flex-1" style={{ color: 'var(--foreground)' }}>
+          {label}
+        </span>
+        <span className="text-[10px] tabular-nums px-1.5 py-0.5 rounded-full" style={{ background: 'var(--surface-raised)', color: 'var(--neutral-400)' }}>
+          <MessageSquare className="h-2.5 w-2.5 inline -mt-px mr-0.5" />{scVisible}/{scTotal}
+        </span>
+        <span className="text-[10px] tabular-nums px-1.5 py-0.5 rounded-full" style={{ background: 'var(--surface-raised)', color: 'var(--neutral-400)' }}>
+          <Layers className="h-2.5 w-2.5 inline -mt-px mr-0.5" />{saVisible}/{saTotal}
+        </span>
+      </button>
+
+      {/* Body — only when expanded */}
+      {open && (
+        <div className="px-3 pb-3 space-y-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          {/* Scenarios */}
+          <CompactCardList
+            title="What You Can Ask"
+            icon="scenario"
+            cards={scenarios}
+            onToggle={(id) => cardSettings.updateScenario(workspace, id, { hidden: !scenarios.find(c => c.id === id)?.hidden })}
+            onReset={() => cardSettings.initScenarios(workspace, DEFAULT_SCENARIOS[workspace])}
+            workspace={workspace}
+            cardSettings={cardSettings}
+          />
+
+          {/* Scope Actions by level */}
+          <CompactScopeList
+            scopeActions={scopeActions}
+            workspace={workspace}
+            cardSettings={cardSettings}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Compact scenario list (inline rows, no description by default) ─── */
+
+function CompactCardList({ title, icon, cards, onToggle, onReset, workspace, cardSettings }: {
+  title: string;
+  icon: string;
+  cards: ScenarioCard[];
+  onToggle: (id: string) => void;
+  onReset: () => void;
+  workspace: WorkspaceKey;
+  cardSettings: ReturnType<typeof useWorkspaceCardSettings>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = cards.filter(c => !c.hidden).length;
+
+  return (
+    <div className="pt-2">
+      <div className="flex items-center justify-between mb-1.5">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1.5">
+          {expanded ? (
+            <ChevronDown className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+          ) : (
+            <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+          )}
+          <span className="text-[11px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+            {title}
+          </span>
+          <span className="text-[10px] tabular-nums" style={{ color: 'var(--neutral-400)' }}>
+            {visible}/{cards.length}
+          </span>
+        </button>
+        <button onClick={onReset} className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ color: 'var(--neutral-400)' }}>
+          Reset
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-0.5">
+          {cards.map(card => (
+            <CompactRow
+              key={card.id}
+              title={card.title}
+              hidden={!!card.hidden}
+              onToggle={() => onToggle(card.id)}
+              fields={[
+                { key: 'title', placeholder: 'Title', value: card.title },
+                { key: 'description', placeholder: 'Description', value: card.description },
+                { key: 'query', placeholder: 'Query', value: card.query },
+              ]}
+              onSave={(updates) => { cardSettings.updateScenario(workspace, card.id, updates); toast.success('Saved'); }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Compact scope action list grouped by level ─── */
+
+function CompactScopeList({ scopeActions, workspace, cardSettings }: {
+  scopeActions: ScopeActionCard[];
+  workspace: WorkspaceKey;
+  cardSettings: ReturnType<typeof useWorkspaceCardSettings>;
+}) {
+  const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
+  const groups = groupByScopeLevel(scopeActions);
+
+  return (
+    <div className="pt-1">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[11px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+          Scope Actions
+        </span>
+        <button
+          onClick={() => cardSettings.initScopeActions(workspace, DEFAULT_SCOPE_ACTIONS[workspace])}
+          className="text-[10px] px-1.5 py-0.5 rounded-md"
+          style={{ color: 'var(--neutral-400)' }}
+        >
+          Reset All
+        </button>
+      </div>
+
+      <div className="space-y-0.5">
+        {groups.map(group => {
+          const vis = group.cards.filter(c => !c.hidden).length;
+          const isOpen = expandedLevel === group.level;
+          return (
+            <div key={group.level}>
+              <button
+                onClick={() => setExpandedLevel(isOpen ? null : group.level)}
+                className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-left hover:bg-[var(--surface-raised)] transition-colors"
+              >
+                {isOpen ? (
+                  <ChevronDown className="h-3 w-3 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+                ) : (
+                  <ChevronRight className="h-3 w-3 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+                )}
+                <span className="text-[11px] font-medium flex-1" style={{ color: 'var(--foreground)' }}>
+                  {group.label}
+                </span>
+                <span className="text-[10px] tabular-nums" style={{ color: vis === 0 ? 'var(--critical)' : 'var(--neutral-400)' }}>
+                  {vis}/{group.cards.length}
+                </span>
+              </button>
+              {isOpen && (
+                <div className="ml-4 space-y-0.5">
+                  {group.cards.map(card => (
+                    <CompactRow
+                      key={card.id}
+                      title={card.title}
+                      hidden={!!card.hidden}
+                      onToggle={() => cardSettings.updateScopeAction(workspace, card.id, { hidden: !card.hidden })}
+                      fields={[
+                        { key: 'title', placeholder: 'Title', value: card.title },
+                        { key: 'description', placeholder: 'Description', value: card.description },
+                        { key: 'prompt', placeholder: 'Prompt', value: card.prompt },
+                      ]}
+                      onSave={(updates) => { cardSettings.updateScopeAction(workspace, card.id, updates); toast.success('Saved'); }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Single compact row: title + edit + eye toggle ─── */
+
+interface EditableField {
+  key: string;
+  placeholder: string;
+  value: string;
+}
+
+function CompactRow({ title, hidden, onToggle, fields, onSave }: {
+  title: string;
+  hidden: boolean;
+  onToggle: () => void;
+  fields?: EditableField[];
+  onSave?: (updates: Record<string, string>) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+
+  const startEdit = () => {
+    if (fields && onSave) {
+      const initial: Record<string, string> = {};
+      fields.forEach(f => initial[f.key] = f.value);
+      setDraft(initial);
+      setIsEditing(true);
+    }
+  };
+
+  const handleSave = () => {
+    if (!onSave) return;
+    onSave(draft);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  return (
+    <div
+      className="px-2 py-1 rounded-md"
+      style={{ opacity: hidden && !isEditing ? 0.45 : 1 }}
+    >
+      {isEditing ? (
+        <div className="space-y-1.5">
+          {fields!.map((field, idx) => (
+            <input
+              key={field.key}
+              autoFocus={idx === 0}
+              value={draft[field.key] ?? ''}
+              onChange={e => setDraft(prev => ({ ...prev, [field.key]: e.target.value }))}
+              onKeyDown={handleKeyDown}
+              placeholder={field.placeholder}
+              className="w-full text-[11px] px-2 py-1 rounded border"
+              style={{
+                background: 'var(--surface-base)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+              }}
+            />
+          ))}
+          <div className="flex items-center gap-1 pt-0.5">
+            <button
+              onClick={handleSave}
+              className="p-0.5 rounded hover:bg-[var(--surface-raised)]"
+              title="Save"
+            >
+              <Check className="h-3 w-3" style={{ color: 'var(--success)' }} />
+            </button>
+            <button
+              onClick={handleCancel}
+              className="p-0.5 rounded hover:bg-[var(--surface-raised)]"
+              title="Cancel"
+            >
+              <X className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] flex-1 truncate" style={{ color: hidden ? 'var(--neutral-400)' : 'var(--foreground)' }}>
+            {title}
+          </span>
+          {fields && onSave && (
+            <button
+              onClick={startEdit}
+              className="p-0.5 rounded shrink-0 hover:bg-[var(--surface-raised)]"
+              title="Edit"
+            >
+              <Pencil className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            </button>
+          )}
+          <button
+            onClick={onToggle}
+            className="p-0.5 rounded shrink-0 hover:bg-[var(--surface-raised)]"
+            title={hidden ? 'Show' : 'Hide'}
+          >
+            {hidden ? (
+              <EyeOff className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            ) : (
+              <Eye className="h-3 w-3" style={{ color: 'var(--primary)' }} />
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Shared UI ─── */
 
 interface SettingsSectionProps {
   icon: React.ReactNode;
@@ -163,18 +473,12 @@ function SettingsSection({ icon, title, description, children }: SettingsSection
   return (
     <div className="rounded-[var(--radius-card)] border border-[color:var(--border)] bg-[var(--card)] p-4 lg:p-5 shadow-[var(--shadow-xs)]">
       <div className="mb-3 flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-subtle)] bg-[var(--accent-color)] text-[color:var(--primary)]"
-        >
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-subtle)] bg-[var(--accent-color)] text-[color:var(--primary)]">
           {icon}
         </div>
         <div>
-          <h3 className="mb-1 text-[13px] font-semibold text-[color:var(--foreground)]">
-            {title}
-          </h3>
-          <p className="text-[12px] text-[color:var(--neutral-500)]">
-            {description}
-          </p>
+          <h3 className="mb-1 text-[13px] font-semibold text-[color:var(--foreground)]">{title}</h3>
+          <p className="text-[12px] text-[color:var(--neutral-500)]">{description}</p>
         </div>
       </div>
       <div className="space-y-2.5 lg:space-y-3">{children}</div>
@@ -192,12 +496,8 @@ function SettingItem({ label, description, control }: SettingItemProps) {
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex-1">
-        <div className="mb-1 text-[13px] font-medium text-[color:var(--foreground)]">
-          {label}
-        </div>
-        <div className="text-[12px] text-[color:var(--neutral-500)]">
-          {description}
-        </div>
+        <div className="mb-1 text-[13px] font-medium text-[color:var(--foreground)]">{label}</div>
+        <div className="text-[12px] text-[color:var(--neutral-500)]">{description}</div>
       </div>
       <div className="ml-4">{control}</div>
     </div>
@@ -214,23 +514,15 @@ function TeamMember({ name, email, role }: TeamMemberProps) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-[var(--surface-base)] p-3 shadow-[var(--shadow-xs)]">
       <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-color)]"
-        >
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-color)]">
           <Lock className="h-5 w-5 text-[color:var(--primary)]" />
         </div>
         <div>
-          <div className="text-[13px] font-medium text-[color:var(--foreground)]">
-            {name}
-          </div>
-          <div className="text-[12px] text-[color:var(--neutral-500)]">
-            {email}
-          </div>
+          <div className="text-[13px] font-medium text-[color:var(--foreground)]">{name}</div>
+          <div className="text-[12px] text-[color:var(--neutral-500)]">{email}</div>
         </div>
       </div>
-      <div className="rounded border border-[color:var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1 text-[12px] font-medium text-[color:var(--foreground)]">
-        {role}
-      </div>
+      <div className="rounded border border-[color:var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1 text-[12px] font-medium text-[color:var(--foreground)]">{role}</div>
     </div>
   );
 }

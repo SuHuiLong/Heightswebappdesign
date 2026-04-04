@@ -7,6 +7,7 @@ import { AppLayout } from '../components/app-layout';
 import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { useRecentQuestions } from '../lib/use-recent-questions';
+import { useWorkspaceCards, useScopeActionOverrides } from '../lib/use-workspace-card-settings';
 import { toast } from 'sonner';
 import { resolveScenario } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
@@ -55,7 +56,7 @@ const getTimestamp = () =>
   });
 
 // Operations-specific scenario prompts
-const OPERATIONS_SCENARIOS = [
+export const OPERATIONS_SCENARIOS = [
   {
     id: 'ops-firmware',
     title: 'Firmware Regression',
@@ -80,7 +81,7 @@ const OPERATIONS_SCENARIOS = [
 ];
 
 // Operations-specific quick actions
-const OPERATIONS_ACTIONS = [
+export const OPERATIONS_ACTIONS = [
   {
     id: 'ops-fleet-health',
     title: 'Fleet Health Summary',
@@ -291,6 +292,30 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
       return [];
   }
 }
+
+/** All scope action IDs used by this workspace (for settings management) */
+export const ALL_OPS_SCOPE_ACTIONS: ScopeQuickAction[] = [
+  { id: 'all-device-list', title: 'Show fleet device list', description: 'Review gateways, routers, and APs across the fleet', prompt: 'Show the fleet device list' },
+  { id: 'all-outages', title: 'View active outages', description: 'See current outages and impacted zones', prompt: 'Show all active outages' },
+  { id: 'all-bandwidth', title: 'Review bandwidth overview', description: 'Look at aggregate traffic history and usage', prompt: 'Show bandwidth overview' },
+  { id: 'all-health', title: 'Run fleet health analysis', description: 'Summarize current health, alerts, and recommended actions', prompt: 'Run fleet health analysis' },
+  { id: 'region-devices', title: 'Show region devices', description: 'List devices in the selected region', prompt: 'Show region devices' },
+  { id: 'region-outages', title: 'View regional outages', description: 'Inspect incidents affecting this region', prompt: 'Show regional outages' },
+  { id: 'region-bandwidth', title: 'Analyze regional bandwidth', description: 'Review usage trends for the selected region', prompt: 'Analyze regional bandwidth' },
+  { id: 'region-optimize', title: 'Recommend channel optimization', description: 'Generate optimization actions for this region', prompt: 'Recommend channel optimization' },
+  { id: 'org-health', title: 'Review org health', description: 'Summarize health, alerts, and next actions', prompt: 'Review org health' },
+  { id: 'org-sla', title: 'Check SLA compliance', description: 'Inspect current SLA performance', prompt: 'Check SLA compliance' },
+  { id: 'org-work-orders', title: 'Open work orders', description: 'Review recent work orders and escalations', prompt: 'Show work orders' },
+  { id: 'org-plans', title: 'Review service plans', description: 'Check current plan mix and subscriber plan details', prompt: 'Review service plans' },
+  { id: 'sub-gateways', title: 'List gateway devices', description: 'Review all gateway devices under this subscriber', prompt: 'Show gateway devices' },
+  { id: 'sub-health', title: 'Review subscriber health', description: 'Summarize gateway health and subscriber-level alerts', prompt: 'Review subscriber health' },
+  { id: 'sub-topology', title: 'View subscriber topology', description: 'Inspect all gateway locations and connected client segments', prompt: 'Show subscriber topology' },
+  { id: 'sub-plan', title: 'Review service plan', description: 'Check plan context', prompt: 'Show service plan' },
+  { id: 'device-topology', title: 'View gateway topology', description: 'Inspect this gateway and its connected client devices', prompt: 'Show gateway topology' },
+  { id: 'device-speed-test', title: 'Run speed test', description: 'Measure current download, upload, and latency', prompt: 'Run speed test' },
+  { id: 'device-plan', title: 'Review current plan', description: 'Check service tier, usage, and billing context', prompt: 'Show current plan' },
+  { id: 'device-diagnostics', title: 'Run diagnostics', description: 'Open detailed diagnostic analysis for this gateway', prompt: 'Run diagnostics' },
+];
 
 // Scope Palette Types
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -644,6 +669,10 @@ export function OperationsWorkspace() {
   ]);
   const { recentQuestions, addToRecent } = useRecentQuestions('operations');
 
+  // Workspace cards from settings
+  const visibleScenarios = useWorkspaceCards(OPERATIONS_SCENARIOS, 'operations', 'scenarios');
+  const scopeActionOverrides = useScopeActionOverrides('operations');
+
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
     getScopePaletteStateForTarget(null, { level: 'all' }),
@@ -652,7 +681,12 @@ export function OperationsWorkspace() {
 
   const workspaceContext = useMemo(() => getWorkspaceContext('operations'), []);
   const starterTasks = useMemo(() => WORKSPACE_STARTER_TASKS.operations, []);
-  const currentScopeActions = useMemo(() => getScopeActions(currentScope), [currentScope]);
+  const currentScopeActions = useMemo(() => getScopeActions(currentScope).map(a => {
+    const o = scopeActionOverrides.get(a.id);
+    if (!o) return a;
+    if (o.hidden) return null;
+    return { ...a, title: o.title ?? a.title, description: o.description ?? a.description, prompt: o.prompt ?? a.prompt };
+  }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
 
   // Scope command parsing
   const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
@@ -1168,6 +1202,7 @@ export function OperationsWorkspace() {
             onPointerLeave={() => setCursorGlow((prev) => ({ ...prev, active: false }))}
           >
             {/* Operations Scenarios - Fixed at top */}
+            {visibleScenarios.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1183,7 +1218,7 @@ export function OperationsWorkspace() {
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {OPERATIONS_SCENARIOS.map((scenario, i) => (
+                  {visibleScenarios.map((scenario, i) => (
                     <motion.button
                       key={scenario.id}
                       initial={{ opacity: 0, y: 8 }}
@@ -1207,6 +1242,7 @@ export function OperationsWorkspace() {
                 </div>
               </div>
             </motion.div>
+            )}
 
             {/* Messages */}
             <div className="max-w-3xl mx-auto space-y-4">

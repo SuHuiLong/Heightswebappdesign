@@ -6,6 +6,7 @@ import { AppLayout } from '../components/app-layout';
 import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { useRecentQuestions } from '../lib/use-recent-questions';
+import { useWorkspaceCards, useScopeActionOverrides } from '../lib/use-workspace-card-settings';
 import { toast } from 'sonner';
 import { resolveScenario } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
@@ -42,7 +43,7 @@ const getTimestamp = () =>
   });
 
 // Growth-specific scenario prompts
-const GROWTH_SCENARIOS = [
+export const GROWTH_SCENARIOS = [
   {
     id: 'grw-churn',
     title: 'Pre-Churn Rescue',
@@ -67,7 +68,7 @@ const GROWTH_SCENARIOS = [
 ];
 
 // Growth-specific quick actions
-const GROWTH_ACTIONS = [
+export const GROWTH_ACTIONS = [
   {
     id: 'grw-fleet-churn',
     title: 'Fleet Churn Risk',
@@ -274,6 +275,30 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
       return [];
   }
 }
+
+/** All scope action IDs used by this workspace (for settings management) */
+export const ALL_GROWTH_SCOPE_ACTIONS: ScopeQuickAction[] = [
+  { id: 'all-growth-ops', title: 'Show fleet growth opportunities', description: 'View all upsell candidates across the fleet', prompt: 'Show all upsell candidates' },
+  { id: 'all-churn-risk', title: 'Show churn risk distribution', description: 'Analyze churn risk across all regions', prompt: 'Analyze churn risk' },
+  { id: 'all-revenue', title: 'Review revenue metrics', description: 'Show current revenue metrics and growth trends', prompt: 'Show revenue metrics' },
+  { id: 'all-segments', title: 'Analyze segments', description: 'Show customer segment breakdown', prompt: 'Show segment breakdown' },
+  { id: 'region-opportunities', title: 'Show region opportunities', description: 'Show growth opportunities in the selected region', prompt: 'Show region opportunities' },
+  { id: 'region-churn', title: 'Region churn analysis', description: 'Analyze churn risk in the selected region', prompt: 'Analyze region churn' },
+  { id: 'region-revenue', title: 'Revenue forecast', description: 'Show revenue forecast for the selected region', prompt: 'Show revenue forecast' },
+  { id: 'region-targeting', title: 'Segment targeting', description: 'Recommend segment targeting for the selected region', prompt: 'Recommend targeting' },
+  { id: 'org-upsell', title: 'Org opportunities', description: 'Show upsell opportunities for this organization', prompt: 'Show org upsell opportunities' },
+  { id: 'org-satisfaction', title: 'Subscriber satisfaction', description: 'Analyze subscriber satisfaction for this organization', prompt: 'Analyze satisfaction' },
+  { id: 'org-revenue', title: 'Revenue analysis', description: 'Show revenue breakdown for this organization', prompt: 'Show revenue breakdown' },
+  { id: 'org-campaigns', title: 'Campaign results', description: 'Review campaign results for this organization', prompt: 'Review campaigns' },
+  { id: 'sub-upsell', title: 'Upsell potential', description: 'Show upsell potential for this subscriber', prompt: 'Show upsell potential' },
+  { id: 'sub-utilization', title: 'Service utilization', description: 'Analyze service utilization for this subscriber', prompt: 'Analyze utilization' },
+  { id: 'sub-churn', title: 'Churn indicators', description: 'Show churn risk indicators for this subscriber', prompt: 'Show churn indicators' },
+  { id: 'sub-vas', title: 'VAS recommendations', description: 'Recommend value-added services for this subscriber', prompt: 'Recommend VAS' },
+  { id: 'device-usage', title: 'Usage patterns', description: 'Show usage patterns for this gateway', prompt: 'Show usage patterns' },
+  { id: 'device-bandwidth', title: 'Bandwidth utilization', description: 'Analyze bandwidth utilization for this gateway', prompt: 'Analyze bandwidth' },
+  { id: 'device-upgrade', title: 'Upgrade eligibility', description: 'Check upgrade eligibility for this gateway', prompt: 'Check upgrade eligibility' },
+  { id: 'device-profile', title: 'Device profiling', description: 'Profile connected devices for this gateway', prompt: 'Profile devices' },
+];
 
 // Scope Palette Types
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -553,6 +578,10 @@ export function GrowthWorkspace() {
   ]);
   const { recentQuestions, addToRecent } = useRecentQuestions('growth');
 
+  // Workspace cards from settings
+  const visibleScenarios = useWorkspaceCards(GROWTH_SCENARIOS, 'growth', 'scenarios');
+  const scopeActionOverrides = useScopeActionOverrides('growth');
+
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
     getScopePaletteStateForTarget(null, { level: 'all' }),
@@ -561,7 +590,12 @@ export function GrowthWorkspace() {
 
   const workspaceContext = useMemo(() => getWorkspaceContext('growth'), []);
   const starterTasks = useMemo(() => WORKSPACE_STARTER_TASKS.growth, []);
-  const currentScopeActions = useMemo(() => getScopeActions(currentScope), [currentScope]);
+  const currentScopeActions = useMemo(() => getScopeActions(currentScope).map(a => {
+    const o = scopeActionOverrides.get(a.id);
+    if (!o) return a;
+    if (o.hidden) return null;
+    return { ...a, title: o.title ?? a.title, description: o.description ?? a.description, prompt: o.prompt ?? a.prompt };
+  }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
 
   // Scope command parsing
   const parsedScopeCommand = useMemo(() => parseScopeCommandInput(input), [input]);
@@ -1062,6 +1096,7 @@ export function GrowthWorkspace() {
             onPointerLeave={() => setCursorGlow((prev) => ({ ...prev, active: false }))}
           >
             {/* Growth Scenarios - Fixed at top */}
+            {visibleScenarios.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1077,7 +1112,7 @@ export function GrowthWorkspace() {
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {GROWTH_SCENARIOS.map((scenario, i) => (
+                  {visibleScenarios.map((scenario, i) => (
                     <motion.button
                       key={scenario.id}
                       initial={{ opacity: 0, y: 8 }}
@@ -1101,6 +1136,7 @@ export function GrowthWorkspace() {
                 </div>
               </div>
             </motion.div>
+            )}
 
             {/* Messages */}
             <div className="max-w-3xl mx-auto space-y-4">

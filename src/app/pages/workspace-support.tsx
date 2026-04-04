@@ -6,6 +6,7 @@ import { AppLayout } from '../components/app-layout';
 import { WorkspaceRightPanel } from '../components/workspace-right-panel';
 import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib/workspace-definitions';
 import { useRecentQuestions } from '../lib/use-recent-questions';
+import { useWorkspaceCards, useScopeActionOverrides } from '../lib/use-workspace-card-settings';
 import { toast } from 'sonner';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
 import { resolveScenario } from '../lib/scenario-resolver';
@@ -57,6 +58,17 @@ interface Ticket {
   actionsTaken?: string[];
   verificationResult?: string;
   outcome?: string;
+  /** AI Resolution lifecycle details */
+  aiResolution?: {
+    phases: Array<{
+      label: string;
+      duration: string;
+      status: 'complete' | 'in-progress' | 'pending';
+      actor: 'ai' | 'human';
+    }>;
+    timeSaved?: string;
+    contributionPercent: number;
+  };
 }
 
 interface Subscriber {
@@ -77,7 +89,7 @@ const getTimestamp = () =>
   });
 
 // Support-specific scenario prompts
-const SUPPORT_SCENARIOS = [
+export const SUPPORT_SCENARIOS = [
   {
     id: 'sup-wifi-recovery',
     title: 'Autonomous Wi-Fi Recovery',
@@ -134,6 +146,17 @@ const MOCK_TICKETS: Ticket[] = [
     ],
     verificationResult: 'Pending — awaiting rollback confirmation to firmware v2.0.9',
     outcome: 'AI accelerated diagnosis (reduced from 4h to 15min). Support engineer is executing staged firmware rollback.',
+    aiResolution: {
+      phases: [
+        { label: 'Telemetry collection', duration: '3min', status: 'complete', actor: 'ai' },
+        { label: 'Pattern correlation', duration: '8min', status: 'complete', actor: 'ai' },
+        { label: 'Root cause identified', duration: '4min', status: 'complete', actor: 'ai' },
+        { label: 'Engineer verification', duration: '12min', status: 'complete', actor: 'human' },
+        { label: 'Firmware rollback', duration: '—', status: 'in-progress', actor: 'human' },
+      ],
+      timeSaved: 'Diagnosis 4h → 15min',
+      contributionPercent: 75,
+    },
   },
   {
     id: 'TKT-4820',
@@ -155,6 +178,16 @@ const MOCK_TICKETS: Ticket[] = [
     ],
     verificationResult: 'Speed test improved to 485 Mbps on 5GHz after channel migration',
     outcome: 'Fully resolved by AI — throughput restored to plan limits. 24h stability monitoring active.',
+    aiResolution: {
+      phases: [
+        { label: 'Spectrum analysis', duration: '2min', status: 'complete', actor: 'ai' },
+        { label: 'Channel congestion detected', duration: '1min', status: 'complete', actor: 'ai' },
+        { label: 'Channel migration', duration: '30s', status: 'complete', actor: 'ai' },
+        { label: 'Speed verification', duration: '3min', status: 'complete', actor: 'ai' },
+      ],
+      timeSaved: 'Resolution 2h → 6min',
+      contributionPercent: 100,
+    },
   },
   {
     id: 'TKT-4819',
@@ -175,6 +208,16 @@ const MOCK_TICKETS: Ticket[] = [
       'Support engineer preparing custom config payload',
     ],
     verificationResult: 'Pending — custom config push being prepared by support engineer',
+    aiResolution: {
+      phases: [
+        { label: 'ACS log analysis', duration: '2min', status: 'complete', actor: 'ai' },
+        { label: 'Template compatibility check', duration: '3min', status: 'complete', actor: 'ai' },
+        { label: 'DHCP mismatch identified', duration: '5min', status: 'complete', actor: 'ai' },
+        { label: 'Custom config preparation', duration: '—', status: 'in-progress', actor: 'human' },
+      ],
+      timeSaved: 'Diagnosis 3h → 10min',
+      contributionPercent: 70,
+    },
   },
   {
     id: 'TKT-4818',
@@ -197,6 +240,17 @@ const MOCK_TICKETS: Ticket[] = [
     ],
     verificationResult: 'Signal quality restored. All QoE metrics within normal range.',
     outcome: 'Autonomously resolved in 4 minutes. Zero user disruption. No human intervention required.',
+    aiResolution: {
+      phases: [
+        { label: 'QoE degradation detected', duration: '0s', status: 'complete', actor: 'ai' },
+        { label: 'Channel scan & analysis', duration: '12s', status: 'complete', actor: 'ai' },
+        { label: 'Channel migration', duration: '8s', status: 'complete', actor: 'ai' },
+        { label: 'Signal verification', duration: '3min', status: 'complete', actor: 'ai' },
+        { label: 'Stability confirmation', duration: '1min', status: 'complete', actor: 'ai' },
+      ],
+      timeSaved: 'Prevented 2h+ subscriber complaint',
+      contributionPercent: 100,
+    },
   },
   {
     id: 'TKT-4817',
@@ -219,6 +273,17 @@ const MOCK_TICKETS: Ticket[] = [
     ],
     verificationResult: 'Session completed with zero quality degradation. MOS 4.2/5.0 maintained.',
     outcome: 'Autonomous session protection. User experienced no disruption during 47-min video call.',
+    aiResolution: {
+      phases: [
+        { label: 'Video session detected', duration: '0s', status: 'complete', actor: 'ai' },
+        { label: 'Interference identified', duration: '5s', status: 'complete', actor: 'ai' },
+        { label: 'QoS protection applied', duration: '2s', status: 'complete', actor: 'ai' },
+        { label: 'Session monitoring', duration: '47min', status: 'complete', actor: 'ai' },
+        { label: 'Protection released', duration: '0s', status: 'complete', actor: 'ai' },
+      ],
+      timeSaved: 'Prevented call drop & SLA breach',
+      contributionPercent: 100,
+    },
   },
 ];
 
@@ -256,7 +321,7 @@ const MOCK_SUBSCRIBERS: Subscriber[] = [
 ];
 
 // Support-specific actions
-const SUPPORT_ACTIONS = [
+export const SUPPORT_ACTIONS = [
   {
     id: 'sup-search-ticket',
     title: 'Search Ticket',
@@ -471,6 +536,30 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
       return [];
   }
 }
+
+/** All scope action IDs used by this workspace (for settings management) */
+export const ALL_SUPPORT_SCOPE_ACTIONS: ScopeQuickAction[] = [
+  { id: 'all-tickets', title: 'View all tickets', description: 'Review all open tickets across the fleet', prompt: 'Show me all open tickets' },
+  { id: 'all-subscribers', title: 'Browse subscribers', description: 'Search and filter subscribers by health or status', prompt: 'Show subscriber list' },
+  { id: 'all-active-cases', title: 'Active cases', description: 'View currently active support cases', prompt: 'Show active support cases' },
+  { id: 'all-recent-resolved', title: 'Recently resolved', description: 'View tickets resolved in the last 24 hours', prompt: 'Show recently resolved tickets' },
+  { id: 'region-tickets', title: 'Regional tickets', description: 'View tickets in this region', prompt: 'Show regional tickets' },
+  { id: 'region-subscribers', title: 'Regional subscribers', description: 'Browse subscribers in this region', prompt: 'Show regional subscribers' },
+  { id: 'region-home-dashboards', title: 'SLA compliance', description: 'Check SLA compliance for this region', prompt: 'Check SLA compliance' },
+  { id: 'region-health', title: 'Regional health', description: 'Check health status for this region', prompt: 'Check regional health' },
+  { id: 'org-tickets', title: 'Organization tickets', description: 'View tickets for this organization', prompt: 'Show organization tickets' },
+  { id: 'org-subscribers', title: 'Organization subscribers', description: 'Browse subscribers in this organization', prompt: 'Show organization subscribers' },
+  { id: 'org-home-dashboards', title: 'Capacity overview', description: 'View capacity and utilization', prompt: 'Show capacity overview' },
+  { id: 'org-sla', title: 'SLA status', description: 'Check SLA compliance for this organization', prompt: 'Check SLA status' },
+  { id: 'sub-tickets', title: 'Subscriber tickets', description: 'View tickets for this subscriber', prompt: 'Show subscriber tickets' },
+  { id: 'sub-health', title: 'Subscriber health', description: 'Check health status for this subscriber', prompt: 'Check subscriber health' },
+  { id: 'sub-home-dashboard', title: 'Home dashboard', description: 'Open home dashboard', prompt: '', action: 'open-home-dashboard' },
+  { id: 'sub-devices', title: 'Gateway devices', description: 'View gateway devices', prompt: 'Show gateway devices' },
+  { id: 'device-topology', title: 'Gateway topology', description: 'View topology for this gateway', prompt: 'Show topology' },
+  { id: 'device-diagnostics', title: 'Run diagnostics', description: 'Run diagnostics for this gateway', prompt: 'Run diagnostics' },
+  { id: 'device-speed-test', title: 'Speed test', description: 'Run speed test for this gateway', prompt: 'Run speed test' },
+  { id: 'device-home-dashboard', title: 'Home dashboard', description: 'View home dashboard', prompt: '', action: 'open-home-dashboard' },
+];
 
 // Scope Palette Types (same as Operations)
 type ScopeCommandName = 'all' | 'region' | 'organization' | 'subscriber' | 'device';
@@ -813,6 +902,7 @@ export function SupportWorkspace() {
   const [isFocused, setIsFocused] = useState(false);
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
+  const [ticketListFilters, setTicketListFilters] = useState<Record<number, string>>({});
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -825,6 +915,10 @@ export function SupportWorkspace() {
     },
   ]);
   const { recentQuestions, addToRecent } = useRecentQuestions('support');
+
+  // Workspace cards from settings
+  const visibleScenarios = useWorkspaceCards(SUPPORT_SCENARIOS, 'support', 'scenarios');
+  const scopeActionOverrides = useScopeActionOverrides('support');
 
   // Scope state
   const [currentScope, setCurrentScope] = useState<ScopeSelection>({ level: 'all' });
@@ -844,7 +938,12 @@ export function SupportWorkspace() {
 
   const workspaceContext = useMemo(() => getWorkspaceContext('support'), []);
   const starterTasks = useMemo(() => WORKSPACE_STARTER_TASKS.support, []);
-  const currentScopeActions = useMemo(() => getScopeActions(currentScope), [currentScope]);
+  const currentScopeActions = useMemo(() => getScopeActions(currentScope).map(a => {
+    const o = scopeActionOverrides.get(a.id);
+    if (!o) return a;
+    if (o.hidden) return null;
+    return { ...a, title: o.title ?? a.title, description: o.description ?? a.description, prompt: o.prompt ?? a.prompt };
+  }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
 
   // Reset active command index when input changes
   useEffect(() => {
@@ -1381,15 +1480,57 @@ export function SupportWorkspace() {
         );
 
       case 'ticket-list':
+        const allTickets = (msg.tickets || []) as Ticket[];
+        const activeFilter = ticketListFilters[idx] || (msg.source === 'overview' && msg.resolutionType ? msg.resolutionType : 'all');
+        const filteredTickets = activeFilter === 'all'
+          ? allTickets
+          : allTickets.filter((t: Ticket) => t.resolutionType === activeFilter);
+        const filterTabs = [
+          { key: 'all', label: 'All', count: allTickets.length },
+          { key: 'autonomous', label: 'Self-Healed', count: allTickets.filter((t: Ticket) => t.resolutionType === 'autonomous').length },
+          { key: 'ai-assisted', label: 'AI + Human', count: allTickets.filter((t: Ticket) => t.resolutionType === 'ai-assisted').length },
+          { key: 'ai-resolved', label: 'AI Resolved', count: allTickets.filter((t: Ticket) => t.resolutionType === 'ai-resolved').length },
+        ];
         return (
           <motion.div
             key={idx}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.17 }}
-            className="ml-11 space-y-2"
+            className="ml-11 space-y-3"
           >
-            {msg.tickets?.map((ticket: Ticket) => renderTicketCard(ticket))}
+            {/* Source label */}
+            {msg.source === 'overview' && (
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--neutral-500)' }}>
+                <Sparkles className="h-3 w-3" />
+                <span>From AI Support Overview</span>
+              </div>
+            )}
+            {/* Filter Tabs */}
+            {allTickets.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap">
+                {filterTabs.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setTicketListFilters(prev => ({ ...prev, [idx]: tab.key }))}
+                    className="text-xs px-2.5 py-1 rounded-lg font-medium transition-colors"
+                    style={{
+                      background: activeFilter === tab.key ? 'var(--primary)' : 'var(--surface-raised)',
+                      color: activeFilter === tab.key ? 'var(--primary-foreground)' : 'var(--neutral-400)',
+                      border: activeFilter === tab.key ? 'none' : '1px solid var(--border)',
+                    }}
+                  >
+                    {tab.label} ({tab.count})
+                  </button>
+                ))}
+              </div>
+            )}
+            {filteredTickets.map((ticket: Ticket) => renderTicketCard(ticket))}
+            {filteredTickets.length === 0 && (
+              <div className="text-xs py-2" style={{ color: 'var(--neutral-400)' }}>
+                No tickets match this filter.
+              </div>
+            )}
           </motion.div>
         );
 
@@ -1551,6 +1692,105 @@ export function SupportWorkspace() {
                   </p>
                 </div>
               )}
+
+              {/* AI Resolution Insight */}
+              {ticket.aiResolution && ticket.resolutionType && (() => {
+                const rConfig = RESOLUTION_TYPE_CONFIG[ticket.resolutionType];
+                const RIcon = rConfig.icon;
+                return (
+                  <div className="p-4 border-b" style={{ borderColor: 'var(--border-subtle)', background: 'var(--surface-raised)' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-3.5 w-3.5" style={{ color: rConfig.color }} />
+                        <span className="text-xs font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+                          AI Resolution Insight
+                        </span>
+                      </div>
+                      <span
+                        className="flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: rConfig.color + '15', color: rConfig.color }}
+                      >
+                        <RIcon className="h-3 w-3" />
+                        {rConfig.label}
+                      </span>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="space-y-0 mb-3">
+                      {ticket.aiResolution.phases.map((phase, pi) => {
+                        const isLast = pi === ticket.aiResolution!.phases.length - 1;
+                        const statusColor = phase.status === 'complete'
+                          ? 'var(--success)'
+                          : phase.status === 'in-progress'
+                            ? 'var(--warning)'
+                            : 'var(--neutral-400)';
+                        return (
+                          <div key={pi} className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div
+                                className="flex h-5 w-5 items-center justify-center rounded-full shrink-0"
+                                style={{ background: statusColor + '15' }}
+                              >
+                                {phase.actor === 'ai' ? (
+                                  <Bot className="h-3 w-3" style={{ color: statusColor }} />
+                                ) : (
+                                  <UserCheck className="h-3 w-3" style={{ color: statusColor }} />
+                                )}
+                              </div>
+                              {!isLast && (
+                                <div className="w-px flex-1 min-h-4" style={{ background: 'var(--border-subtle)' }} />
+                              )}
+                            </div>
+                            <div className="pb-3 flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm" style={{ color: 'var(--foreground)' }}>
+                                  {phase.label}
+                                </span>
+                                <span className="text-xs ml-2 shrink-0" style={{ color: 'var(--neutral-400)' }}>
+                                  {phase.duration}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Impact Metrics */}
+                    <div className="flex items-center gap-4 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                      {ticket.aiResolution.timeSaved && (
+                        <div className="flex-1">
+                          <span className="text-[10px] uppercase tracking-[0.06em]" style={{ color: 'var(--neutral-500)' }}>
+                            Time Saved
+                          </span>
+                          <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                            {ticket.aiResolution.timeSaved}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <span className="text-[10px] uppercase tracking-[0.06em]" style={{ color: 'var(--neutral-500)' }}>
+                          AI Contribution
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full" style={{ background: 'var(--border)' }}>
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${ticket.aiResolution.contributionPercent}%`,
+                                background: rConfig.color,
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                            {ticket.aiResolution.contributionPercent}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Action Buttons */}
               <div className="p-4 flex gap-2">
@@ -1818,147 +2058,8 @@ export function SupportWorkspace() {
             }}
             onPointerLeave={() => setCursorGlow((prev) => ({ ...prev, active: false }))}
           >
-            {/* Resolution Type Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22 }}
-              className="max-w-3xl mx-auto mb-6"
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
-                <span className="text-xs font-semibold tracking-[0.08em]" style={{ color: 'var(--neutral-500)' }}>
-                  AI SUPPORT OVERVIEW
-                </span>
-                <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {/* Autonomous */}
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0 * 0.08, duration: 0.2 }}
-                  onClick={() => {
-                    const autonomous = MOCK_TICKETS.filter(t => t.resolutionType === 'autonomous');
-                    setHasInteracted(true);
-                    setMessages((prev) => [
-                      ...prev,
-                      { type: 'user', message: 'Show me autonomous resolutions', timestamp: getTimestamp() },
-                      {
-                        type: 'ai-text',
-                        message: `Found ${autonomous.length} cases where AI autonomously discovered and resolved issues without any human intervention. These are self-healing actions triggered by continuous monitoring.`,
-                        timestamp: getTimestamp(),
-                      },
-                      { type: 'ticket-list', tickets: autonomous },
-                    ]);
-                  }}
-                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
-                  style={{
-                    background: 'var(--card)',
-                    borderColor: 'var(--border)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--success)15' }}>
-                      <Zap className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--success)' }}>
-                      Self-Healed
-                    </span>
-                  </div>
-                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
-                    {MOCK_TICKETS.filter(t => t.resolutionType === 'autonomous').length}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
-                    AI self-discovered & resolved
-                  </div>
-                </motion.button>
-
-                {/* AI-Assisted */}
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1 * 0.08, duration: 0.2 }}
-                  onClick={() => {
-                    const assisted = MOCK_TICKETS.filter(t => t.resolutionType === 'ai-assisted');
-                    setHasInteracted(true);
-                    setMessages((prev) => [
-                      ...prev,
-                      { type: 'user', message: 'Show me AI-assisted cases', timestamp: getTimestamp() },
-                      {
-                        type: 'ai-text',
-                        message: `Found ${assisted.length} cases where AI accelerated diagnosis and recommended solutions, but human support engineers finalized the resolution. These represent the AI + Human collaboration model.`,
-                        timestamp: getTimestamp(),
-                      },
-                      { type: 'ticket-list', tickets: assisted },
-                    ]);
-                  }}
-                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
-                  style={{
-                    background: 'var(--card)',
-                    borderColor: 'var(--border)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--primary)15' }}>
-                      <UserCheck className="h-3.5 w-3.5" style={{ color: 'var(--primary)' }} />
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--primary)' }}>
-                      AI + Human
-                    </span>
-                  </div>
-                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
-                    {MOCK_TICKETS.filter(t => t.resolutionType === 'ai-assisted').length}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
-                    AI accelerated, human finalized
-                  </div>
-                </motion.button>
-
-                {/* AI Resolved */}
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 2 * 0.08, duration: 0.2 }}
-                  onClick={() => {
-                    const aiResolved = MOCK_TICKETS.filter(t => t.resolutionType === 'ai-resolved');
-                    setHasInteracted(true);
-                    setMessages((prev) => [
-                      ...prev,
-                      { type: 'user', message: 'Show me AI-fully-resolved cases', timestamp: getTimestamp() },
-                      {
-                        type: 'ai-text',
-                        message: `Found ${aiResolved.length} cases where users initiated a request and AI fully resolved the issue end-to-end without any human support involvement.`,
-                        timestamp: getTimestamp(),
-                      },
-                      { type: 'ticket-list', tickets: aiResolved },
-                    ]);
-                  }}
-                  className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
-                  style={{
-                    background: 'var(--card)',
-                    borderColor: 'var(--border)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: 'var(--success)15' }}>
-                      <Bot className="h-3.5 w-3.5" style={{ color: 'var(--success)' }} />
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--success)' }}>
-                      AI Resolved
-                    </span>
-                  </div>
-                  <div className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--foreground)' }}>
-                    {MOCK_TICKETS.filter(t => t.resolutionType === 'ai-resolved').length}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--neutral-400)' }}>
-                    User-initiated, AI fully resolved
-                  </div>
-                </motion.button>
-              </div>
-            </motion.div>
-
             {/* Support Scenarios - Fixed at top */}
+            {visibleScenarios.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1974,7 +2075,7 @@ export function SupportWorkspace() {
                   <div className="h-px flex-1" style={{ background: 'var(--border-subtle)' }} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {SUPPORT_SCENARIOS.map((scenario, i) => (
+                  {visibleScenarios.map((scenario, i) => (
                     <motion.button
                       key={scenario.id}
                       initial={{ opacity: 0, y: 8 }}
@@ -2000,6 +2101,7 @@ export function SupportWorkspace() {
                 </div>
               </div>
             </motion.div>
+            )}
 
             {/* Messages */}
             <div className="max-w-3xl mx-auto space-y-4">

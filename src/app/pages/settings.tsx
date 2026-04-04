@@ -5,6 +5,14 @@ import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { ThemeToggle } from '../components/theme-toggle';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '../components/ui/dialog';
+import {
   useWorkspaceCardSettings,
   type WorkspaceKey,
   type ScenarioCard,
@@ -228,21 +236,21 @@ function CompactCardList({ title, icon, cards, onToggle, onReset, workspace, car
 
   return (
     <div className="pt-2">
-      <div className="flex items-center justify-between mb-1.5">
-        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 py-1">
           {expanded ? (
-            <ChevronDown className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            <ChevronDown className="h-3.5 w-3.5" style={{ color: 'var(--neutral-400)' }} />
           ) : (
-            <ChevronRight className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
+            <ChevronRight className="h-3.5 w-3.5" style={{ color: 'var(--neutral-400)' }} />
           )}
-          <span className="text-[11px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
+          <span className="text-[12px] font-semibold tracking-[0.06em] uppercase" style={{ color: 'var(--neutral-500)' }}>
             {title}
           </span>
-          <span className="text-[10px] tabular-nums" style={{ color: 'var(--neutral-400)' }}>
+          <span className="text-[11px] tabular-nums" style={{ color: 'var(--neutral-400)' }}>
             {visible}/{cards.length}
           </span>
         </button>
-        <button onClick={onReset} className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ color: 'var(--neutral-400)' }}>
+        <button onClick={onReset} className="text-[11px] px-2 py-1 rounded-md hover:bg-[var(--surface-raised)] transition-colors" style={{ color: 'var(--neutral-400)' }}>
           Reset
         </button>
       </div>
@@ -256,9 +264,9 @@ function CompactCardList({ title, icon, cards, onToggle, onReset, workspace, car
               hidden={!!card.hidden}
               onToggle={() => onToggle(card.id)}
               fields={[
-                { key: 'title', placeholder: 'Title', value: card.title },
-                { key: 'description', placeholder: 'Description', value: card.description },
-                { key: 'query', placeholder: 'Query', value: card.query },
+                { key: 'title', label: 'Title', value: card.title },
+                { key: 'description', label: 'Description', value: card.description },
+                { key: 'query', label: 'Query', value: card.query },
               ]}
               onSave={(updates) => { cardSettings.updateScenario(workspace, card.id, updates); toast.success('Saved'); }}
             />
@@ -302,17 +310,17 @@ function CompactScopeList({ scopeActions, workspace, cardSettings }: {
             <div key={group.level}>
               <button
                 onClick={() => setExpandedLevel(isOpen ? null : group.level)}
-                className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-left hover:bg-[var(--surface-raised)] transition-colors"
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-left hover:bg-[var(--surface-raised)] transition-colors"
               >
                 {isOpen ? (
-                  <ChevronDown className="h-3 w-3 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--neutral-400)' }} />
                 ) : (
-                  <ChevronRight className="h-3 w-3 shrink-0" style={{ color: 'var(--neutral-400)' }} />
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--neutral-400)' }} />
                 )}
-                <span className="text-[11px] font-medium flex-1" style={{ color: 'var(--foreground)' }}>
+                <span className="text-[12px] font-medium flex-1" style={{ color: 'var(--foreground)' }}>
                   {group.label}
                 </span>
-                <span className="text-[10px] tabular-nums" style={{ color: vis === 0 ? 'var(--critical)' : 'var(--neutral-400)' }}>
+                <span className="text-[11px] tabular-nums" style={{ color: vis === 0 ? 'var(--critical)' : 'var(--neutral-400)' }}>
                   {vis}/{group.cards.length}
                 </span>
               </button>
@@ -325,9 +333,9 @@ function CompactScopeList({ scopeActions, workspace, cardSettings }: {
                       hidden={!!card.hidden}
                       onToggle={() => cardSettings.updateScopeAction(workspace, card.id, { hidden: !card.hidden })}
                       fields={[
-                        { key: 'title', placeholder: 'Title', value: card.title },
-                        { key: 'description', placeholder: 'Description', value: card.description },
-                        { key: 'prompt', placeholder: 'Prompt', value: card.prompt },
+                        { key: 'title', label: 'Title', value: card.title },
+                        { key: 'description', label: 'Description', value: card.description },
+                        { key: 'prompt', label: 'Prompt', value: card.prompt },
                       ]}
                       onSave={(updates) => { cardSettings.updateScopeAction(workspace, card.id, updates); toast.success('Saved'); }}
                     />
@@ -346,7 +354,7 @@ function CompactScopeList({ scopeActions, workspace, cardSettings }: {
 
 interface EditableField {
   key: string;
-  placeholder: string;
+  label: string;
   value: string;
 }
 
@@ -357,7 +365,7 @@ function CompactRow({ title, hidden, onToggle, fields, onSave }: {
   fields?: EditableField[];
   onSave?: (updates: Record<string, string>) => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
 
   const startEdit = () => {
@@ -365,98 +373,94 @@ function CompactRow({ title, hidden, onToggle, fields, onSave }: {
       const initial: Record<string, string> = {};
       fields.forEach(f => initial[f.key] = f.value);
       setDraft(initial);
-      setIsEditing(true);
+      setDialogOpen(true);
     }
   };
 
   const handleSave = () => {
     if (!onSave) return;
     onSave(draft);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      handleCancel();
-    }
+    setDialogOpen(false);
+    toast.success('Saved');
   };
 
   return (
-    <div
-      className="px-2 py-1 rounded-md"
-      style={{ opacity: hidden && !isEditing ? 0.45 : 1 }}
-    >
-      {isEditing ? (
-        <div className="space-y-1.5">
-          {fields!.map((field, idx) => (
-            <input
-              key={field.key}
-              autoFocus={idx === 0}
-              value={draft[field.key] ?? ''}
-              onChange={e => setDraft(prev => ({ ...prev, [field.key]: e.target.value }))}
-              onKeyDown={handleKeyDown}
-              placeholder={field.placeholder}
-              className="w-full text-[11px] px-2 py-1 rounded border"
-              style={{
-                background: 'var(--surface-base)',
-                borderColor: 'var(--border)',
-                color: 'var(--foreground)',
-              }}
-            />
-          ))}
-          <div className="flex items-center gap-1 pt-0.5">
-            <button
-              onClick={handleSave}
-              className="p-0.5 rounded hover:bg-[var(--surface-raised)]"
-              title="Save"
-            >
-              <Check className="h-3 w-3" style={{ color: 'var(--success)' }} />
-            </button>
-            <button
-              onClick={handleCancel}
-              className="p-0.5 rounded hover:bg-[var(--surface-raised)]"
-              title="Cancel"
-            >
-              <X className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] flex-1 truncate" style={{ color: hidden ? 'var(--neutral-400)' : 'var(--foreground)' }}>
-            {title}
-          </span>
-          {fields && onSave && (
-            <button
-              onClick={startEdit}
-              className="p-0.5 rounded shrink-0 hover:bg-[var(--surface-raised)]"
-              title="Edit"
-            >
-              <Pencil className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
-            </button>
+    <>
+      <div
+        onClick={fields && onSave ? startEdit : undefined}
+        className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${fields && onSave ? 'cursor-pointer hover:bg-[var(--surface-raised)] transition-colors' : ''}`}
+        style={{ opacity: hidden ? 0.45 : 1 }}
+      >
+        <span className="text-[12px] flex-1 truncate" style={{ color: hidden ? 'var(--neutral-400)' : 'var(--foreground)' }}>
+          {title}
+        </span>
+        <button
+          onClick={e => { e.stopPropagation(); onToggle(); }}
+          className="p-1.5 rounded-md shrink-0 hover:bg-[var(--surface-raised)] transition-colors"
+          title={hidden ? 'Show' : 'Hide'}
+        >
+          {hidden ? (
+            <EyeOff className="h-3.5 w-3.5" style={{ color: 'var(--neutral-400)' }} />
+          ) : (
+            <Eye className="h-3.5 w-3.5" style={{ color: 'var(--primary)' }} />
           )}
-          <button
-            onClick={onToggle}
-            className="p-0.5 rounded shrink-0 hover:bg-[var(--surface-raised)]"
-            title={hidden ? 'Show' : 'Hide'}
-          >
-            {hidden ? (
-              <EyeOff className="h-3 w-3" style={{ color: 'var(--neutral-400)' }} />
-            ) : (
-              <Eye className="h-3 w-3" style={{ color: 'var(--primary)' }} />
-            )}
-          </button>
-        </div>
-      )}
-    </div>
+        </button>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent
+          style={{ background: 'var(--card)', color: 'var(--foreground)' }}
+          className="sm:max-w-md"
+        >
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--foreground)' }}>Edit Card</DialogTitle>
+            <DialogDescription style={{ color: 'var(--neutral-500)' }}>
+              {title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {fields!.map(field => (
+              <div key={field.key} className="space-y-1">
+                <label className="text-[12px] font-medium" style={{ color: 'var(--neutral-500)' }}>
+                  {field.label}
+                </label>
+                <input
+                  value={draft[field.key] ?? ''}
+                  onChange={e => setDraft(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+                  }}
+                  placeholder={field.label}
+                  autoFocus={field.key === 'title'}
+                  className="w-full text-sm px-3 py-2 rounded-lg border"
+                  style={{
+                    background: 'var(--surface-base)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="rounded-[var(--radius-control)]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="rounded-[var(--radius-control)]"
+              style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

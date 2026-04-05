@@ -9,10 +9,16 @@ import { WORKSPACES, WORKSPACE_STARTER_TASKS, getWorkspaceContext } from '../lib
 import { useRecentQuestions } from '../lib/use-recent-questions';
 import { useWorkspaceCards, useScopeActionOverrides } from '../lib/use-workspace-card-settings';
 import { toast } from 'sonner';
-import { resolveScenario } from '../lib/scenario-resolver';
+import { resolveScenarioForWorkspace } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
 import { WorkspaceSession } from '../components/generative/workspace-session';
 import { ScopeActionsCard, ScopeActionOption } from '../components/chat-messages';
+import {
+  buildProcessRailSnapshot,
+  DEMO_PROCESS_TIMING,
+  getScenarioProcessDuration,
+  type WorkbenchProcessPhase,
+} from '../lib/workbench-model';
 import {
   REGIONS,
   REGION_LABELS,
@@ -77,6 +83,7 @@ interface ScopeQuickAction {
   title: string;
   description: string;
   prompt: string;
+  scenarioId?: string;
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
@@ -428,9 +435,15 @@ export function OperationsWorkspace() {
   const [isFocused, setIsFocused] = useState(false);
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
+  const scenarioTimerRef = useRef<number[]>([]);
   const [currentScope, setCurrentScope] = useState<ScopeSelection>(
     getWorkspaceDefaultScope('fleet'),
   );
+  const [activeProcess, setActiveProcess] = useState<{
+    scenario: ScenarioDefinition;
+    query: string;
+    phase: WorkbenchProcessPhase;
+  } | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -481,6 +494,27 @@ export function OperationsWorkspace() {
     [currentScope, scopePaletteQuery, scopePaletteState],
   );
   const isScopeCommandMode = input.startsWith('/');
+  const scopeLabel = useMemo(
+    () => getWorkspaceScopeDisplayLabel('fleet', currentScope),
+    [currentScope],
+  );
+  const processRail = useMemo(
+    () =>
+      activeProcess
+        ? buildProcessRailSnapshot({
+            scenario: activeProcess.scenario,
+            activeQuery: activeProcess.query,
+            scopeLabel,
+            phase: activeProcess.phase,
+          })
+        : null,
+    [activeProcess, scopeLabel],
+  );
+
+  const clearScenarioTimers = () => {
+    scenarioTimerRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scenarioTimerRef.current = [];
+  };
 
   // Reset active command index when input changes
   useEffect(() => {
@@ -505,6 +539,8 @@ export function OperationsWorkspace() {
     );
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
+  useEffect(() => () => clearScenarioTimers(), []);
+
   // Auto-scroll
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -523,6 +559,9 @@ export function OperationsWorkspace() {
   }, [messages.length, shouldReduceMotion]);
 
   const handleScopeChange = (scope: ScopeSelection) => {
+    clearScenarioTimers();
+    setActiveProcess(null);
+    setIsTyping(false);
     setCurrentScope(scope);
     // Reset interaction state to show cards again when scope changes
     setHasInteracted(false);
@@ -715,12 +754,16 @@ export function OperationsWorkspace() {
     }
   };
 
-  const handleGenerativePrompt = (query: string) => {
+  const handleGenerativePrompt = (query: string, preferredScenarioId?: string) => {
     // Hide the main area cards on first interaction
     setHasInteracted(true);
     addToRecent(query);
-
-    const matchedScenario = resolveScenario(query);
+    clearScenarioTimers();
+    const matchedScenario = resolveScenarioForWorkspace(
+      query,
+      'fleet',
+      preferredScenarioId,
+    );
 
     setMessages((prev) => [
       ...prev,
@@ -732,18 +775,55 @@ export function OperationsWorkspace() {
     ]);
 
     if (matchedScenario) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: 'generative-workspace',
+          scenario: matchedScenario,
+        },
+      ]);
+      setActiveProcess({
+        scenario: matchedScenario,
+        query,
+        phase: 'intake',
+      });
       setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: 'generative-workspace',
-            scenario: matchedScenario,
-          },
-        ]);
-      }, 300);
+      const totalDuration = getScenarioProcessDuration(
+        matchedScenario.loadingStages.length,
+      );
+      const readyAt = Math.max(
+        DEMO_PROCESS_TIMING.stageMs * 3,
+        totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
+      );
+
+      scenarioTimerRef.current = [
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'evidence' }
+              : current,
+          );
+        }, DEMO_PROCESS_TIMING.stageMs),
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'synthesis' }
+              : current,
+          );
+        }, DEMO_PROCESS_TIMING.stageMs * 2),
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'ready' }
+              : current,
+          );
+        }, readyAt),
+        window.setTimeout(() => {
+          setIsTyping(false);
+        }, totalDuration),
+      ];
     } else {
+      setActiveProcess(null);
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
@@ -786,7 +866,10 @@ export function OperationsWorkspace() {
           <WorkspaceSession
             key={idx}
             scenario={msg.scenario}
-            onFollowUp={(prompt) => handleGenerativePrompt(prompt)}
+            onFollowUp={(prompt) => handleGenerativePrompt(prompt, msg.scenario?.id)}
+            stageDurationMs={DEMO_PROCESS_TIMING.stageMs}
+            finalPauseMs={DEMO_PROCESS_TIMING.finalPauseMs}
+            blockRevealMs={DEMO_PROCESS_TIMING.blockRevealMs}
           />
         );
 
@@ -1023,7 +1106,9 @@ export function OperationsWorkspace() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.08, duration: 0.2 }}
-                      onClick={() => handleGenerativePrompt(scenario.query)}
+                      onClick={() =>
+                        handleGenerativePrompt(scenario.query, scenario.scenarioId)
+                      }
                       className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
                       style={{
                         background: 'var(--card)',
@@ -1116,7 +1201,9 @@ export function OperationsWorkspace() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, duration: 0.2 }}
-                    onClick={() => handleGenerativePrompt(action.prompt)}
+                    onClick={() =>
+                      handleGenerativePrompt(action.prompt, action.scenarioId)
+                    }
                     className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"
                     style={{
                       background: 'var(--surface-raised)',
@@ -1318,6 +1405,9 @@ export function OperationsWorkspace() {
         <WorkspaceRightPanel
           workspaceId="fleet"
           isActive={isTyping}
+          reasoningSteps={processRail?.reasoning}
+          backendActions={processRail?.backendActions}
+          auditEntries={processRail?.auditEntries}
         />
       </div>
     </AppLayout>

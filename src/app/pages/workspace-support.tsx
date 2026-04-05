@@ -9,9 +9,15 @@ import { useRecentQuestions } from '../lib/use-recent-questions';
 import { useWorkspaceCards, useScopeActionOverrides } from '../lib/use-workspace-card-settings';
 import { toast } from 'sonner';
 import { ScopeSelection, ScopeSelector } from '../components/scope-selector';
-import { resolveScenario } from '../lib/scenario-resolver';
+import { resolveScenarioForWorkspace } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
 import { WorkspaceSession } from '../components/generative/workspace-session';
+import {
+  buildProcessRailSnapshot,
+  DEMO_PROCESS_TIMING,
+  getScenarioProcessDuration,
+  type WorkbenchProcessPhase,
+} from '../lib/workbench-model';
 import {
   REGIONS,
   REGION_LABELS,
@@ -30,9 +36,11 @@ import {
 import {
   ALL_SUPPORT_SCOPE_ACTIONS as ALL_SUPPORT_SCOPE_ACTIONS_DATA,
   getScopeCommandOptionsForWorkspace,
+  getSupportPresetQueryMatch,
   getWorkspaceDefaultScope,
   getWorkspaceExperience,
   getWorkspaceScopeActions,
+  getWorkspaceScopeDisplayLabel,
   getWorkspaceScopePaletteContextLabel,
   getWorkspaceScopePalettePlaceholder,
   getWorkspaceScopePaletteStateForTarget,
@@ -339,6 +347,7 @@ interface ScopeQuickAction {
   description: string;
   prompt: string;
   action?: string;
+  scenarioId?: string;
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
@@ -684,6 +693,7 @@ export function SupportWorkspace() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const scenarioTimerRef = useRef<number[]>([]);
 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -695,6 +705,11 @@ export function SupportWorkspace() {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedSubscriber, setSelectedSubscriber] = useState<Subscriber | null>(null);
+  const [activeProcess, setActiveProcess] = useState<{
+    scenario: ScenarioDefinition;
+    query: string;
+    phase: WorkbenchProcessPhase;
+  } | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai-text',
@@ -747,6 +762,27 @@ export function SupportWorkspace() {
     if (o.hidden) return null;
     return { ...a, title: o.title ?? a.title, description: o.description ?? a.description, prompt: o.prompt ?? a.prompt };
   }).filter(Boolean as any), [currentScope, scopeActionOverrides]);
+  const scopeLabel = useMemo(
+    () => getWorkspaceScopeDisplayLabel('support', currentScope),
+    [currentScope],
+  );
+  const processRail = useMemo(
+    () =>
+      activeProcess
+        ? buildProcessRailSnapshot({
+            scenario: activeProcess.scenario,
+            activeQuery: activeProcess.query,
+            scopeLabel,
+            phase: activeProcess.phase,
+          })
+        : null,
+    [activeProcess, scopeLabel],
+  );
+
+  const clearScenarioTimers = () => {
+    scenarioTimerRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scenarioTimerRef.current = [];
+  };
 
   // Reset active command index when input changes
   useEffect(() => {
@@ -771,7 +807,12 @@ export function SupportWorkspace() {
     );
   }, [currentScope, isScopeCommandMode, parsedScopeCommand]);
 
+  useEffect(() => () => clearScenarioTimers(), []);
+
   const handleScopeChange = (scope: ScopeSelection) => {
+    clearScenarioTimers();
+    setActiveProcess(null);
+    setIsTyping(false);
     setCurrentScope(scope);
     // Reset interaction state to show cards again when scope changes
     setHasInteracted(false);
@@ -981,7 +1022,7 @@ export function SupportWorkspace() {
     return () => cancelAnimationFrame(frame);
   }, [messages.length, shouldReduceMotion]);
 
-  const handleSend = (queryOverride?: string) => {
+  const handleSend = (queryOverride?: string, preferredScenarioId?: string) => {
     const query = queryOverride || input.trim();
     if (!query) return;
 
@@ -996,6 +1037,7 @@ export function SupportWorkspace() {
     // Hide the main area cards on first interaction
     setHasInteracted(true);
     addToRecent(query);
+    clearScenarioTimers();
 
     // Only clear input if it's not an override
     if (!queryOverride) {
@@ -1008,24 +1050,95 @@ export function SupportWorkspace() {
       { type: 'user', message: query, timestamp: getTimestamp() },
     ]);
 
+    const presetMatch = getSupportPresetQueryMatch(query);
+
+    if (presetMatch?.kind === 'ticket') {
+      const matchedTicket = MOCK_TICKETS.find(
+        (ticket) => ticket.id === presetMatch.ticketId,
+      );
+
+      if (matchedTicket) {
+        setActiveProcess(null);
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          setSelectedTicket(matchedTicket);
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: 'ai-text',
+              message: presetMatch.intro,
+              timestamp: getTimestamp(),
+            },
+            {
+              type: 'ticket-found',
+              ticket: matchedTicket,
+              timestamp: getTimestamp(),
+            },
+          ]);
+        }, 1500);
+        return;
+      }
+    }
+
     // Try generative scenario first
-    const matchedScenario = resolveScenario(query);
+    const matchedScenario = resolveScenarioForWorkspace(
+      query,
+      'support',
+      preferredScenarioId,
+    );
 
     if (matchedScenario) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: 'generative-workspace',
+          scenario: matchedScenario,
+        },
+      ]);
+      setActiveProcess({
+        scenario: matchedScenario,
+        query,
+        phase: 'intake',
+      });
       setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: 'generative-workspace',
-            scenario: matchedScenario,
-          },
-        ]);
-      }, 300);
+      const totalDuration = getScenarioProcessDuration(
+        matchedScenario.loadingStages.length,
+      );
+      const readyAt = Math.max(
+        DEMO_PROCESS_TIMING.stageMs * 3,
+        totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
+      );
+      scenarioTimerRef.current = [
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'evidence' }
+              : current,
+          );
+        }, DEMO_PROCESS_TIMING.stageMs),
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'synthesis' }
+              : current,
+          );
+        }, DEMO_PROCESS_TIMING.stageMs * 2),
+        window.setTimeout(() => {
+          setActiveProcess((current) =>
+            current?.scenario.id === matchedScenario.id && current.query === query
+              ? { ...current, phase: 'ready' }
+              : current,
+          );
+        }, readyAt),
+        window.setTimeout(() => {
+          setIsTyping(false);
+        }, totalDuration),
+      ];
       return;
     }
 
+    setActiveProcess(null);
     setIsTyping(true);
 
     setTimeout(() => {
@@ -1820,7 +1933,10 @@ export function SupportWorkspace() {
           <WorkspaceSession
             key={idx}
             scenario={msg.scenario}
-            onFollowUp={(prompt) => handleSend(prompt)}
+            onFollowUp={(prompt) => handleSend(prompt, msg.scenario?.id)}
+            stageDurationMs={DEMO_PROCESS_TIMING.stageMs}
+            finalPauseMs={DEMO_PROCESS_TIMING.finalPauseMs}
+            blockRevealMs={DEMO_PROCESS_TIMING.blockRevealMs}
           />
         );
 
@@ -1899,7 +2015,7 @@ export function SupportWorkspace() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.08, duration: 0.2 }}
                       onClick={() => {
-                        handleSend(scenario.query);
+                        handleSend(scenario.query, scenario.scenarioId);
                       }}
                       className="text-left p-3 rounded-xl border transition-all hover:scale-[1.02]"
                       style={{
@@ -1995,7 +2111,7 @@ export function SupportWorkspace() {
                         const sub = MOCK_SUBSCRIBERS.find(s => s.id === subscriberId);
                         handleOpenHomeDashboard(sub);
                       } else if (action.prompt) {
-                        handleSend(action.prompt);
+                        handleSend(action.prompt, action.scenarioId);
                       }
                     }}
                     className="text-left px-3 py-2.5 rounded-lg border transition-all hover:scale-[1.02]"
@@ -2198,6 +2314,9 @@ export function SupportWorkspace() {
         <WorkspaceRightPanel
           workspaceId="support"
           isActive={isTyping}
+          reasoningSteps={processRail?.reasoning}
+          backendActions={processRail?.backendActions}
+          auditEntries={processRail?.auditEntries}
         />
       </div>
     </AppLayout>

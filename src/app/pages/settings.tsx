@@ -31,11 +31,27 @@ const WORKSPACE_META: Record<WorkspaceKey, { label: string; color: string }> = {
 };
 
 function toScenarioCards(items: typeof OPERATIONS_SCENARIOS): ScenarioCard[] {
-  return items.map(s => ({ id: s.id, title: s.title, description: s.description, query: s.query, icon: s.icon ?? 'zap', hidden: false }));
+  return items.map(s => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    query: s.query,
+    icon: s.icon ?? 'zap',
+    scenarioId: s.scenarioId,
+    hidden: false,
+  }));
 }
 
-function toScopeActionCards(items: { id: string; title: string; description: string; prompt: string; action?: string }[]): ScopeActionCard[] {
-  return items.map(a => ({ id: a.id, title: a.title, description: a.description, prompt: a.prompt ?? '', action: (a as any).action, hidden: false }));
+function toScopeActionCards(items: { id: string; title: string; description: string; prompt: string; action?: string; scenarioId?: string }[]): ScopeActionCard[] {
+  return items.map(a => ({
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    prompt: a.prompt ?? '',
+    action: (a as any).action,
+    scenarioId: a.scenarioId,
+    hidden: false,
+  }));
 }
 
 const DEFAULT_SCENARIOS: Record<WorkspaceKey, ScenarioCard[]> = {

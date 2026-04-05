@@ -26,6 +26,7 @@ export interface WorkspaceScenarioCard {
   description: string;
   query: string;
   icon: string;
+  scenarioId?: string;
 }
 
 export interface WorkspaceScopeActionCard {
@@ -34,6 +35,7 @@ export interface WorkspaceScopeActionCard {
   description: string;
   prompt: string;
   action?: string;
+  scenarioId?: string;
 }
 
 export interface ReasoningStep {
@@ -98,6 +100,12 @@ interface WorkspaceExperienceConfig {
   scenarioHeading: string;
   scopeActionHeading: string;
   reasoning: WorkspaceReasoningRail;
+}
+
+export interface SupportPresetQueryMatch {
+  kind: 'ticket';
+  ticketId: string;
+  intro: string;
 }
 
 interface SupportHome {
@@ -385,24 +393,27 @@ function getGrowthSubscribersForCampaign(campaignId?: string) {
 export const OPERATIONS_SCENARIOS: WorkspaceScenarioCard[] = [
   {
     id: 'ops-firmware',
-    title: 'FW 2.1.3 Memory Regression',
-    description: '47 gateways showing rising memory trend since Tuesday, correlated with the last OTA.',
+    title: 'Post-Rollout Hidden Regression',
+    description: 'Trace the FW 2.1 rollback candidate AI found across Broadcom-heavy cohorts.',
     query: 'Investigate the FW 2.1.3 memory regression across impacted cohorts and show projected critical risk over the next 5 days.',
     icon: 'activity',
+    scenarioId: 'firmware-regression',
   },
   {
-    id: 'ops-channel-congestion',
-    title: 'Region East Channel Congestion',
-    description: '5GHz utilization is up 31% in 3 cohorts, with 12 subscriber complaints already correlated.',
-    query: 'Explain the Region East channel congestion pattern, highlight impacted cohorts, and compare it to the previous baseline.',
+    id: 'ops-regional-incident',
+    title: 'Regional Incident Interpretation',
+    description: 'Explain the correlated outage AI stitched together across three South Region PoPs.',
+    query: 'Explain the current South Region incident, show the affected footprint, and summarize what operators should do next.',
     icon: 'radio',
+    scenarioId: 'regional-incident',
   },
   {
-    id: 'ops-service-deployment',
-    title: 'Service Deployment Anomaly',
-    description: 'Parental Controls install failures are elevated on MTK platform while Broadcom remains normal.',
-    query: 'Review parental controls deployment health, isolate platform-specific failures, and recommend the next remediation step.',
+    id: 'ops-cost-forecast',
+    title: 'Proactive Cost Forecast',
+    description: 'Project next month’s ingestion cost before fleet growth pushes the plan out of bounds.',
+    query: 'Forecast next month’s ingestion cost with 15% fleet growth and highlight the budget risk.',
     icon: 'layers',
+    scenarioId: 'resource-planning',
   },
 ];
 
@@ -413,6 +424,7 @@ export const SUPPORT_SCENARIOS: WorkspaceScenarioCard[] = [
     description: 'Wi-Fi interference auto-resolved on 3 homes today.',
     query: 'Show the homes AI auto-recovered today, explain what interference was found, and verify the fix outcome.',
     icon: 'wifi',
+    scenarioId: 'autonomous-wifi-recovery',
   },
   {
     id: 'sup-session-protection',
@@ -420,6 +432,7 @@ export const SUPPORT_SCENARIOS: WorkspaceScenarioCard[] = [
     description: '2 video calls were protected during peak congestion.',
     query: 'Show the sessions AI protected during peak congestion and explain which QoS actions kept them stable.',
     icon: 'shield',
+    scenarioId: 'critical-session-protection',
   },
   {
     id: 'sup-firmware-investigation',
@@ -427,15 +440,54 @@ export const SUPPORT_SCENARIOS: WorkspaceScenarioCard[] = [
     description: 'FW 2.1.3 causing IoT disconnects, traced by AI to an ACS config change.',
     query: 'Open the firmware regression case, summarize AI root-cause evidence, and list what still needs human review.',
     icon: 'cpu',
+    scenarioId: 'firmware-regression',
   },
   {
     id: 'sup-slow-speed',
     title: 'User-Reported Slow Speed',
-    description: 'Subscriber #4821 reported slow service and AI confirmed an external CDN issue.',
-    query: 'Open the slow-speed complaint for subscriber #4821 and show the AI diagnosis, verification, and next action.',
+    description: 'Subscriber #4820 reported slow service and AI isolated the issue to local 5GHz congestion.',
+    query: 'Open the slow-speed complaint for subscriber #4820 and show the AI diagnosis, verification, and next action.',
     icon: 'zap',
   },
 ];
+
+const SUPPORT_PRESET_QUERY_MATCHERS: Array<{
+  pattern: RegExp;
+  match: SupportPresetQueryMatch;
+}> = [
+  {
+    pattern: /this subscriber reports slow internet\. what did ai find\??/i,
+    match: {
+      kind: 'ticket',
+      ticketId: 'TKT-4820',
+      intro:
+        'I found the related slow-speed case. Here is what AI diagnosed, how it fixed it, and what was verified afterward.',
+    },
+  },
+  {
+    pattern: /slow[-\s]speed complaint|slow internet|slow service/i,
+    match: {
+      kind: 'ticket',
+      ticketId: 'TKT-4820',
+      intro:
+        'I found the related slow-speed case. Here is what AI diagnosed, how it fixed it, and what was verified afterward.',
+    },
+  },
+];
+
+export function getSupportPresetQueryMatch(
+  query: string,
+): SupportPresetQueryMatch | null {
+  if (!query.trim()) {
+    return null;
+  }
+
+  const matcher = SUPPORT_PRESET_QUERY_MATCHERS.find(({ pattern }) =>
+    pattern.test(query),
+  );
+
+  return matcher?.match ?? null;
+}
 
 export const GROWTH_SCENARIOS: WorkspaceScenarioCard[] = [
   {
@@ -444,6 +496,7 @@ export const GROWTH_SCENARIOS: WorkspaceScenarioCard[] = [
     description: '2,340 households are showing sustained saturation with high upgrade confidence.',
     query: 'Rank the highest-confidence bandwidth upsell candidates and explain which usage signals are driving the score.',
     icon: 'trending-up',
+    scenarioId: 'bandwidth-upsell',
   },
   {
     id: 'grw-churn-risk',
@@ -451,6 +504,7 @@ export const GROWTH_SCENARIOS: WorkspaceScenarioCard[] = [
     description: '47 subscribers were flagged this week despite having no active support tickets.',
     query: 'Show subscribers at highest churn risk this week, especially those with declining usage and no open tickets.',
     icon: 'alert-triangle',
+    scenarioId: 'churn-prevention',
   },
   {
     id: 'grw-vas-opportunity',
@@ -458,6 +512,7 @@ export const GROWTH_SCENARIOS: WorkspaceScenarioCard[] = [
     description: '847 households have gaming consoles or children\'s devices but no parental control subscription.',
     query: 'Identify households with devices that indicate untapped VAS potential (gaming consoles, children\'s devices) but no corresponding subscription.',
     icon: 'sparkles',
+    scenarioId: 'vas-device-fingerprint',
   },
 ];
 
@@ -468,110 +523,126 @@ function buildOperationsScopeActions(scope: ScopeSelection): WorkspaceScopeActio
     case 'region':
       return [
         {
-          id: 'region-zero-touch-rate',
-          title: 'Zero-touch resolution rate',
-          description: `Review this week's autonomous fix rate in ${label}.`,
-          prompt: `Show zero-touch resolution performance for ${label} this week.`,
+          id: 'region-rollout-regression',
+          title: 'Rollout regressions',
+          description: `Check which firmware or service rollouts in ${label} are drifting away from baseline.`,
+          prompt: `Show rollout regressions emerging in ${label} and explain which cohorts are moving first.`,
+          scenarioId: 'firmware-regression',
+        },
+        {
+          id: 'region-incident-interpretation',
+          title: 'Regional incident',
+          description: `Summarize the correlated incident signals operators need to understand in ${label}.`,
+          prompt: `Interpret the active incident footprint in ${label} and summarize the likely root cause.`,
+          scenarioId: 'regional-incident',
+        },
+        {
+          id: 'region-cost-forecast',
+          title: 'Growth cost forecast',
+          description: `Project whether fleet growth in ${label} pushes ingest cost beyond plan.`,
+          prompt: `Forecast ingest cost growth for ${label} next month and highlight any budget risk.`,
+          scenarioId: 'resource-planning',
         },
         {
           id: 'region-cohorts-at-risk',
-          title: 'Cohorts at risk',
-          description: `Surface the cohorts in ${label} trending toward degradation.`,
-          prompt: `Find the cohorts in ${label} trending toward degradation over the next 7 days.`,
-        },
-        {
-          id: 'region-deployments',
-          title: 'Deployments at risk',
-          description: `Inspect upcoming deployments in ${label} with elevated failure risk.`,
-          prompt: `Show deployments at risk in ${label} and explain which signals are driving the risk.`,
-        },
-        {
-          id: 'region-open-support',
-          title: 'Open in Support',
-          description: `Drill from the fleet pattern into impacted homes and gateways.`,
-          prompt: `Open the impacted gateways from ${label} in Support so I can inspect the worst cases.`,
+          title: 'Highest-risk cohorts',
+          description: `Rank the cohorts in ${label} that are most likely to become operator work next.`,
+          prompt: `Rank the highest-risk cohorts in ${label} and explain what would justify intervention now.`,
+          scenarioId: 'firmware-regression',
         },
       ];
     case 'organization':
       return [
         {
-          id: 'org-cohort-watch',
-          title: 'Cohorts trending down',
-          description: `Rank the highest-risk cohorts inside ${label}.`,
-          prompt: `Rank the cohorts inside ${label} by predictive degradation risk.`,
+          id: 'org-rollout-regression',
+          title: 'Rollout regressions',
+          description: `Review rollout health inside ${label} and isolate the cohort diverging from baseline.`,
+          prompt: `Review rollout regressions inside ${label} and identify the cohort most likely to require rollback.`,
+          scenarioId: 'firmware-regression',
         },
         {
-          id: 'org-deployment-health',
-          title: 'Deployment health',
-          description: `Review service rollout health and anomaly clusters for ${label}.`,
-          prompt: `Show deployment health for ${label} over the last 48 hours and highlight anomalies.`,
+          id: 'org-incident-summary',
+          title: 'Service impact summary',
+          description: `Explain how the current incident is affecting ${label} and where the pressure concentrates.`,
+          prompt: `Summarize current incident impact for ${label} and show the operator-facing risk.`,
+          scenarioId: 'regional-incident',
         },
         {
-          id: 'org-compare-last-week',
-          title: 'Fleet health vs last week',
-          description: `Compare the current health posture for ${label} against last week.`,
-          prompt: `Compare current fleet health for ${label} with last week and summarize what changed.`,
+          id: 'org-cost-forecast',
+          title: 'Next-month cost risk',
+          description: `Project the next cost step-up for ${label} before the next expansion window.`,
+          prompt: `Forecast next month’s ingestion cost for ${label} and explain the confidence range.`,
+          scenarioId: 'resource-planning',
         },
         {
-          id: 'org-open-support',
-          title: 'Open in Support',
-          description: `Jump to the homes and gateways impacted by the current pattern.`,
-          prompt: `Open the impacted homes for ${label} in Support with the current context attached.`,
+          id: 'org-compare-stable-baseline',
+          title: 'Stable vs failing cohort',
+          description: `Compare the leading at-risk cohort in ${label} against the last stable baseline.`,
+          prompt: `Compare the failing cohort in ${label} with the last stable baseline and explain the delta.`,
+          scenarioId: 'firmware-regression',
         },
       ];
     case 'subscriber':
       return [
         {
-          id: 'sub-compare-version',
-          title: 'Compare previous version',
-          description: `Check whether the current cohort diverges from the prior baseline.`,
-          prompt: `Compare ${label} with the previous firmware or service version and explain the delta.`,
+          id: 'sub-rollout-risk',
+          title: 'Rollout risk',
+          description: `Check whether ${label} is now the cohort most likely to trigger fleet intervention.`,
+          prompt: `Explain the rollout risk for ${label} and why it is or is not the leading rollback candidate.`,
+          scenarioId: 'firmware-regression',
         },
         {
-          id: 'sub-memory-trend',
-          title: 'Review trend line',
-          description: `Inspect the full anomaly timeline for ${label}.`,
-          prompt: `Show the full anomaly timeline for ${label} and explain when the pattern emerged.`,
+          id: 'sub-incident-path',
+          title: 'Incident path',
+          description: `See how the incident would flow from backbone impact down to ${label}.`,
+          prompt: `Show how the current incident path affects ${label} and what operators should watch next.`,
+          scenarioId: 'regional-incident',
+        },
+        {
+          id: 'sub-growth-forecast',
+          title: 'Cost if growth continues',
+          description: `Project the cost impact if ${label} keeps growing at the current rate.`,
+          prompt: `Forecast the ingest cost if ${label} continues growing at the current pace.`,
+          scenarioId: 'resource-planning',
         },
         {
           id: 'sub-rollback-plan',
           title: 'Draft rollback plan',
           description: `Prepare the staged rollback or mitigation plan for ${label}.`,
-          prompt: `Draft a rollback or mitigation plan for ${label} with expected impact and risk.`,
-        },
-        {
-          id: 'sub-open-support',
-          title: 'Open in Support',
-          description: `Pivot from the cohort to the worst impacted homes and gateways.`,
-          prompt: `Open the worst impacted homes from ${label} in Support with the current analysis attached.`,
+          prompt: `Draft a rollback plan for ${label} and summarize the operator risk if action is delayed.`,
+          scenarioId: 'firmware-regression',
         },
       ];
     case 'all':
     default:
       return [
         {
-          id: 'all-zero-touch-rate',
-          title: 'Zero-touch resolution rate',
-          description: `Review this week's autonomous fix rate across the fleet.`,
-          prompt: 'Show this week’s zero-touch resolution rate across the fleet and compare it with last week.',
+          id: 'all-rollout-regressions',
+          title: 'Rollout regressions',
+          description: 'Find the rollouts that are quietly drifting toward rollback.',
+          prompt: 'Show the post-rollout regressions emerging across the fleet and identify the most urgent cohort.',
+          scenarioId: 'firmware-regression',
         },
         {
-          id: 'all-cohorts-at-risk',
-          title: 'Cohorts at risk',
-          description: 'Find the cohorts trending toward degradation before they become incidents.',
-          prompt: 'Find the cohorts trending toward degradation in the next 7 days and explain what AI is seeing.',
+          id: 'all-regional-incidents',
+          title: 'Regional incidents',
+          description: 'Summarize the incident patterns operators should understand before paging more teams.',
+          prompt: 'Interpret the active regional incidents across the fleet and summarize the biggest operator risk.',
+          scenarioId: 'regional-incident',
         },
         {
-          id: 'all-deployments',
-          title: 'Deployments at risk',
-          description: 'Flag the upcoming rollouts most likely to degrade service health.',
-          prompt: 'Show upcoming deployments at risk and explain the predicted failure modes.',
+          id: 'all-growth-cost',
+          title: 'Growth cost forecast',
+          description: 'Project the ingest-cost impact of near-term fleet growth before budget gets surprised.',
+          prompt: 'Forecast next month’s fleet ingestion cost with current growth assumptions and highlight any budget risk.',
+          scenarioId: 'resource-planning',
         },
         {
-          id: 'all-health-vs-last-week',
-          title: 'Fleet health vs last week',
-          description: 'Compare this week’s fleet posture against the prior baseline.',
-          prompt: 'Compare fleet health against last week and summarize the most important changes.',
+          id: 'all-priority-cohorts',
+          title: 'Priority cohorts',
+          description: 'Rank the cohorts most likely to become operator work in the next few days.',
+          prompt: 'Rank the fleet cohorts that need operator attention first and explain why.',
+          scenarioId: 'firmware-regression',
         },
       ];
   }
@@ -584,55 +655,63 @@ function buildSupportScopeActions(scope: ScopeSelection): WorkspaceScopeActionCa
     case 'organization':
       return [
         {
-          id: 'region-home-recent-activity',
-          title: 'Recent home activity',
-          description: `Review the latest AI interventions at ${label}.`,
-          prompt: `Show the most recent AI interventions and validations for ${label}.`,
+          id: 'org-home-recovery',
+          title: 'Recovery timeline',
+          description: `Review the autonomous Wi-Fi recovery AI already completed at ${label}.`,
+          prompt: `Show the autonomous Wi-Fi recovery timeline for ${label} and explain how AI verified the fix.`,
+          scenarioId: 'autonomous-wifi-recovery',
         },
         {
-          id: 'region-home-repeat-issues',
-          title: 'Repeat incidents',
-          description: `Find recurring issues at ${label}.`,
-          prompt: `Show repeat incidents at ${label} and explain why AI keeps seeing them.`,
+          id: 'org-home-protected-session',
+          title: 'Protected sessions',
+          description: `Review the high-value sessions AI protected at ${label}.`,
+          prompt: `Show the protected sessions at ${label} and explain which QoS actions kept them stable.`,
+          scenarioId: 'critical-session-protection',
         },
         {
-          id: 'region-home-pending-validation',
-          title: 'Pending validations',
-          description: `Check the latest fixes at ${label} that still need confirmation.`,
-          prompt: `Show pending validations for ${label} and explain what still needs review.`,
+          id: 'org-home-firmware-case',
+          title: 'Rollback review',
+          description: `Open the firmware case at ${label} that still needs human judgment.`,
+          prompt: `Open the firmware rollback case for ${label} and summarize what still needs human review.`,
+          scenarioId: 'firmware-regression',
         },
         {
-          id: 'region-home-gateway-health',
-          title: 'Gateway health',
-          description: `Compare the gateways behind ${label}.`,
-          prompt: `Compare gateway health for ${label} and highlight the highest-risk gateway.`,
+          id: 'org-home-pending-validation',
+          title: 'Pending validation',
+          description: `Check which AI-applied fixes at ${label} are still waiting for sign-off.`,
+          prompt: `Show pending validation work for ${label} and explain why the case is not fully closed yet.`,
+          scenarioId: 'firmware-regression',
         },
       ];
     case 'subscriber':
       return [
         {
-          id: 'org-gateway-validation',
-          title: 'Run gateway validation',
-          description: `Verify that the latest AI fix on ${label} is holding.`,
-          prompt: `Run a post-fix validation for ${label} and summarize the result.`,
+          id: 'sub-gateway-validation',
+          title: 'Post-fix validation',
+          description: `Verify that the latest AI recovery on ${label} is still holding.`,
+          prompt: `Run a post-fix validation for ${label} and summarize the autonomous recovery result.`,
+          scenarioId: 'autonomous-wifi-recovery',
         },
         {
-          id: 'org-gateway-root-cause',
-          title: 'Review root cause',
-          description: `Open the AI-generated root cause summary for ${label}.`,
-          prompt: `Show the AI-generated root cause summary for ${label} with supporting evidence.`,
+          id: 'sub-gateway-protected-session',
+          title: 'Protected session review',
+          description: `Show how AI protected the last critical session on ${label}.`,
+          prompt: `Review the protected session on ${label} and explain the QoS actions that kept it stable.`,
+          scenarioId: 'critical-session-protection',
         },
         {
-          id: 'org-gateway-home-timeline',
-          title: 'Open home timeline',
-          description: `See how ${label} relates to the full home incident timeline.`,
-          prompt: `Open the home timeline related to ${label} and highlight recent interventions.`,
+          id: 'sub-gateway-root-cause',
+          title: 'Root-cause summary',
+          description: `Open the firmware rollback evidence tied to ${label}.`,
+          prompt: `Show the firmware rollback evidence for ${label} and explain why human review is still required.`,
+          scenarioId: 'firmware-regression',
         },
         {
-          id: 'org-gateway-device-risk',
-          title: 'Connected device risk',
-          description: `Identify the devices behind ${label} still at risk.`,
-          prompt: `Show connected devices behind ${label} that still look unstable after the latest fix.`,
+          id: 'sub-gateway-stability',
+          title: 'Current stability',
+          description: `Validate whether ${label} is stable enough to keep the case closed.`,
+          prompt: `Validate current stability for ${label} and call out any remaining support risk.`,
+          scenarioId: 'autonomous-wifi-recovery',
         },
       ];
     case 'device':
@@ -641,25 +720,29 @@ function buildSupportScopeActions(scope: ScopeSelection): WorkspaceScopeActionCa
           id: 'sub-device-interference',
           title: 'Device interference check',
           description: `Validate whether ${label} is still affected by interference.`,
-          prompt: `Check whether ${label} is still seeing interference and explain the latest evidence.`,
+          prompt: `Check whether ${label} is still seeing interference and explain the latest recovery evidence.`,
+          scenarioId: 'autonomous-wifi-recovery',
         },
         {
           id: 'sub-device-session-protection',
           title: 'Session protection',
           description: `Review how AI protected active sessions for ${label}.`,
           prompt: `Show how AI protected active sessions for ${label} during the last incident window.`,
+          scenarioId: 'critical-session-protection',
         },
         {
           id: 'sub-device-connectivity',
           title: 'Connectivity validation',
           description: `Verify current connectivity health for ${label}.`,
-          prompt: `Validate current connectivity health for ${label} and summarize any remaining risk.`,
+          prompt: `Validate current connectivity health for ${label} and summarize any remaining support risk.`,
+          scenarioId: 'autonomous-wifi-recovery',
         },
         {
-          id: 'sub-device-gateway-context',
-          title: 'Open gateway context',
-          description: `Go back to the parent gateway and full case context.`,
-          prompt: `Open the parent gateway and case context for ${label}.`,
+          id: 'sub-device-rollback-evidence',
+          title: 'Rollback evidence',
+          description: `Surface the firmware evidence tied to ${label} before you escalate the case.`,
+          prompt: `Open the firmware rollback evidence for ${label} and summarize what still needs human review.`,
+          scenarioId: 'firmware-regression',
         },
       ];
     case 'region':
@@ -670,24 +753,28 @@ function buildSupportScopeActions(scope: ScopeSelection): WorkspaceScopeActionCa
           title: 'Cases AI resolved today',
           description: 'Review zero-touch cases AI closed without human intervention.',
           prompt: 'Show the cases AI fully resolved today and summarize what was fixed.',
+          scenarioId: 'autonomous-wifi-recovery',
+        },
+        {
+          id: 'all-protected-sessions',
+          title: 'Protected sessions',
+          description: 'Review the high-value sessions AI kept stable during peak congestion.',
+          prompt: 'Show the protected sessions AI handled today and explain which QoS actions kept them stable.',
+          scenarioId: 'critical-session-protection',
         },
         {
           id: 'all-cases-needing-attention',
           title: 'Cases needing my attention',
-          description: 'Surface the open cases AI could not safely finish on its own.',
-          prompt: 'Show the open cases needing human attention and explain why AI escalated them.',
-        },
-        {
-          id: 'all-repeat-offenders',
-          title: 'Repeat offenders',
-          description: 'Identify homes and gateways that keep reappearing in the queue.',
-          prompt: 'Find the repeat offender homes this week and explain the recurring issue pattern.',
+          description: 'Surface the firmware or rollback cases AI could not safely finish on its own.',
+          prompt: 'Show the support cases that still need human review and summarize the blocked rollback evidence.',
+          scenarioId: 'firmware-regression',
         },
         {
           id: 'all-pending-validations',
           title: 'Pending validations',
           description: 'Check which AI fixes are waiting for verification.',
-          prompt: 'Show AI fixes waiting for validation and explain what still needs to be confirmed.',
+          prompt: 'Show AI fixes waiting for validation and explain what still needs to be confirmed before closure.',
+          scenarioId: 'firmware-regression',
         },
       ];
   }
@@ -704,24 +791,28 @@ function buildGrowthScopeActions(scope: ScopeSelection): WorkspaceScopeActionCar
           title: 'Best opportunities in segment',
           description: `Rank the most valuable opportunities inside ${label}.`,
           prompt: `Rank the most valuable opportunities inside ${label} and explain the scoring factors.`,
+          scenarioId: 'bandwidth-upsell',
         },
         {
           id: 'region-segment-churn',
-          title: 'Compare churn across campaigns',
-          description: `See how churn risk shifts across campaigns for ${label}.`,
-          prompt: `Compare churn risk across campaigns in ${label} and highlight where intervention matters most.`,
+          title: 'Churn rescue priorities',
+          description: `See which homes inside ${label} need intervention before they quietly churn.`,
+          prompt: `Show the churn rescue priorities inside ${label} and explain the silent-sufferer signals.`,
+          scenarioId: 'churn-prevention',
+        },
+        {
+          id: 'region-segment-vas',
+          title: 'VAS fit scan',
+          description: `Find households inside ${label} that already look ready for a device-led add-on.`,
+          prompt: `Identify the best VAS-fit households inside ${label} using device fingerprints and subscription gaps.`,
+          scenarioId: 'vas-device-fingerprint',
         },
         {
           id: 'region-segment-revenue',
-          title: 'Project revenue impact',
-          description: `Forecast the revenue upside for expanding ${label}.`,
-          prompt: `Project the revenue impact of expanding offers in ${label}.`,
-        },
-        {
-          id: 'region-segment-health',
-          title: 'Review segment health',
-          description: `Summarize health, opportunity, and risk for ${label}.`,
-          prompt: `Summarize segment health for ${label}, including opportunity size and churn risk.`,
+          title: 'Revenue impact',
+          description: `Forecast the revenue upside if ${label} converts at the current propensity level.`,
+          prompt: `Forecast the revenue impact for ${label} if the top upsell opportunities convert at current rates.`,
+          scenarioId: 'bandwidth-upsell',
         },
       ];
     case 'organization':
@@ -731,24 +822,28 @@ function buildGrowthScopeActions(scope: ScopeSelection): WorkspaceScopeActionCar
           title: 'Campaign ROI tracker',
           description: `Review the ROI trend for ${label}.`,
           prompt: `Show the ROI tracker for ${label} and explain where conversion is being won or lost.`,
+          scenarioId: 'bandwidth-upsell',
         },
         {
-          id: 'org-campaign-propensity',
-          title: 'Top high-propensity subscribers',
-          description: `Surface the highest-likelihood responders inside ${label}.`,
-          prompt: `Show the highest-propensity subscribers inside ${label} and explain why AI ranked them there.`,
+          id: 'org-campaign-churn',
+          title: 'Save-at-risk subscribers',
+          description: `Surface the subscribers inside ${label} most likely to churn without outreach.`,
+          prompt: `Show the subscribers inside ${label} most at risk of churn and explain the rescue priority.`,
+          scenarioId: 'churn-prevention',
         },
         {
-          id: 'org-campaign-dropoff',
-          title: 'Drop-off reasons',
-          description: `Find the biggest drop-off reasons in ${label}.`,
-          prompt: `Show the top drop-off reasons in ${label} and what offer changes would improve conversion.`,
+          id: 'org-campaign-vas',
+          title: 'Device-led offers',
+          description: `Find the households inside ${label} where connected devices suggest a missing add-on.`,
+          prompt: `Show the households inside ${label} where device fingerprints suggest an untapped VAS offer.`,
+          scenarioId: 'vas-device-fingerprint',
         },
         {
           id: 'org-campaign-next-offer',
           title: 'Next-best offer',
           description: `Recommend the next offer adjustment for ${label}.`,
           prompt: `Recommend the next-best offer for ${label} based on current conversion and churn signals.`,
+          scenarioId: 'bandwidth-upsell',
         },
       ];
     case 'subscriber':
@@ -758,24 +853,28 @@ function buildGrowthScopeActions(scope: ScopeSelection): WorkspaceScopeActionCar
           title: 'Upsell confidence',
           description: `Explain why ${label} is or is not likely to convert.`,
           prompt: `Explain the upsell confidence score for ${label} and the evidence behind it.`,
+          scenarioId: 'bandwidth-upsell',
         },
         {
           id: 'sub-churn-save-offer',
           title: 'Save offer',
           description: `Recommend the best save offer for ${label}.`,
           prompt: `Recommend the best churn save offer for ${label} and explain the expected impact.`,
+          scenarioId: 'churn-prevention',
         },
         {
-          id: 'sub-revenue-lift',
-          title: 'Expected revenue lift',
-          description: `Forecast the potential lift if ${label} converts.`,
-          prompt: `Forecast the expected revenue lift if ${label} accepts the recommended offer.`,
+          id: 'sub-vas-fit',
+          title: 'VAS fit',
+          description: `Check whether ${label} looks like a strong fit for a device-led add-on.`,
+          prompt: `Explain whether ${label} is a strong VAS-fit household based on device fingerprints and subscription gaps.`,
+          scenarioId: 'vas-device-fingerprint',
         },
         {
           id: 'sub-similar-households',
           title: 'Compare similar households',
           description: `Compare ${label} with similar subscribers in the same campaign.`,
           prompt: `Compare ${label} with similar subscribers in the same campaign and explain where it differs.`,
+          scenarioId: 'bandwidth-upsell',
         },
       ];
     case 'all':
@@ -786,24 +885,28 @@ function buildGrowthScopeActions(scope: ScopeSelection): WorkspaceScopeActionCar
           title: 'Top 10 upsell candidates',
           description: 'Show the strongest AI-ranked upsell opportunities this week.',
           prompt: 'Show this week’s top 10 upsell candidates and explain why AI ranked them highest.',
+          scenarioId: 'bandwidth-upsell',
         },
         {
           id: 'all-churn-risk-no-tickets',
           title: 'Churn risk with no tickets',
           description: 'Find subscribers whose usage and sentiment are declining without support activity.',
           prompt: 'Show subscribers at churn risk who have no open tickets and explain the early warning signals.',
+          scenarioId: 'churn-prevention',
         },
         {
           id: 'all-vas-opportunity',
           title: 'VAS opportunity scan',
           description: 'Find households with devices that indicate untapped VAS potential.',
           prompt: 'Identify households with gaming consoles or children\'s devices but no parental control subscription, and estimate the revenue opportunity.',
+          scenarioId: 'vas-device-fingerprint',
         },
         {
-          id: 'all-campaign-roi',
-          title: 'Campaign ROI tracker',
-          description: 'Compare current campaign ROI and identify where to focus next.',
-          prompt: 'Show campaign ROI across growth workspaces and recommend where to focus next.',
+          id: 'all-revenue-impact',
+          title: 'Revenue impact',
+          description: 'Forecast near-term revenue upside from the strongest current growth motions.',
+          prompt: 'Forecast the near-term revenue impact of the strongest current growth opportunities and recommend where to focus next.',
+          scenarioId: 'bandwidth-upsell',
         },
       ];
   }

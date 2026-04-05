@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Bot, Sparkles, ChevronRight, Clock, Shield, Layers } from 'lucide-react';
+import { Bot, Sparkles, ChevronRight } from 'lucide-react';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
 import { GenerativeBlockRenderer } from './generative-cards';
+import { DEMO_PROCESS_TIMING } from '../../lib/workbench-model';
 
 // ─── Loading Stage Indicator ───────────────────────────────────────────────
 
@@ -99,94 +100,6 @@ function LoadingStageIndicator({ stages, currentStage }: { stages: string[]; cur
   );
 }
 
-// ─── Workspace Session Header ──────────────────────────────────────────────
-
-function WorkspaceSessionHeader({ scenario }: { scenario: ScenarioDefinition }) {
-  const confidenceColor =
-    scenario.confidence >= 90
-      ? 'var(--success)'
-      : scenario.confidence >= 80
-        ? 'var(--primary)'
-        : 'var(--warning)';
-
-  const familyLabel =
-    scenario.family === 'fleet'
-      ? 'Fleet'
-      : scenario.family === 'business'
-        ? 'Business'
-        : 'Planning';
-
-  const familyIcon = scenario.family === 'fleet' ? Shield : scenario.family === 'business' ? Layers : Clock;
-
-  const FamilyIcon = familyIcon;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="chat-card-row mb-3 flex gap-2.5"
-    >
-      <div className="chat-message-avatar flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--accent-color)]">
-        <Bot className="h-4 w-4 text-[color:var(--primary)]" />
-      </div>
-      <div className="flex-1">
-        <div className="chat-card-shell relative overflow-hidden rounded-[var(--radius-card)] border border-[color:var(--border)] bg-[var(--card)] shadow-[var(--shadow-xs)]">
-          <div className="chat-card-content p-3.5">
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-                  <h3 className="text-[14px] font-semibold" style={{ color: 'var(--foreground)' }}>
-                    {scenario.title}
-                  </h3>
-                </div>
-                <div className="mt-0.5 text-[12px]" style={{ color: 'var(--neutral-500)' }}>
-                  {scenario.subtitle}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-lg border border-[color:var(--border)] px-2 py-1">
-                  <FamilyIcon className="h-3 w-3" style={{ color: 'var(--primary)' }} />
-                  <span className="text-[11px] font-medium" style={{ color: 'var(--neutral-600)' }}>
-                    {familyLabel}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center gap-1.5 rounded-lg px-2 py-1"
-                  style={{ background: `${confidenceColor}14` }}
-                >
-                  <div className="h-1.5 w-1.5 rounded-full" style={{ background: confidenceColor }} />
-                  <span className="text-[11px] font-semibold" style={{ color: confidenceColor }}>
-                    {scenario.confidence}% conf.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <p className="mb-3 text-[13px] leading-[1.4]" style={{ color: 'var(--neutral-600)' }}>
-              {scenario.description}
-            </p>
-
-            {/* Evidence Domains */}
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {scenario.evidenceDomains.map((domain) => (
-                <span
-                  key={domain}
-                  className="rounded-md border border-[color:var(--border)] px-2 py-0.5 text-[11px] font-medium"
-                  style={{ color: 'var(--neutral-600)', background: 'var(--surface-base)' }}
-                >
-                  {domain}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ─── Follow-up Prompts ─────────────────────────────────────────────────────
 
 function FollowUpPrompts({
@@ -236,9 +149,18 @@ function FollowUpPrompts({
 interface WorkspaceSessionProps {
   scenario: ScenarioDefinition;
   onFollowUp: (prompt: string) => void;
+  stageDurationMs?: number;
+  finalPauseMs?: number;
+  blockRevealMs?: number;
 }
 
-export function WorkspaceSession({ scenario, onFollowUp }: WorkspaceSessionProps) {
+export function WorkspaceSession({
+  scenario,
+  onFollowUp,
+  stageDurationMs = DEMO_PROCESS_TIMING.stageMs,
+  finalPauseMs = DEMO_PROCESS_TIMING.finalPauseMs,
+  blockRevealMs = DEMO_PROCESS_TIMING.blockRevealMs,
+}: WorkspaceSessionProps) {
   const shouldReduceMotion = useReducedMotion();
   const [loadingStage, setLoadingStage] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -257,12 +179,12 @@ export function WorkspaceSession({ scenario, onFollowUp }: WorkspaceSessionProps
       if (current >= stageCount) {
         clearInterval(interval);
         // Small delay before showing content
-        setTimeout(() => setIsLoaded(true), 400);
+        setTimeout(() => setIsLoaded(true), finalPauseMs);
       }
-    }, 600);
+    }, stageDurationMs);
 
     return () => clearInterval(interval);
-  }, [scenario.loadingStages.length]);
+  }, [finalPauseMs, scenario.loadingStages.length, stageDurationMs]);
 
   // Staggered block reveal
   useEffect(() => {
@@ -278,10 +200,10 @@ export function WorkspaceSession({ scenario, onFollowUp }: WorkspaceSessionProps
       if (current >= blockCount) {
         clearInterval(interval);
       }
-    }, 300);
+    }, blockRevealMs);
 
     return () => clearInterval(interval);
-  }, [isLoaded, scenario.blocks.length]);
+  }, [blockRevealMs, isLoaded, scenario.blocks.length]);
 
   return (
     <>
@@ -296,9 +218,6 @@ export function WorkspaceSession({ scenario, onFollowUp }: WorkspaceSessionProps
       <AnimatePresence>
         {isLoaded && (
           <>
-            {/* Session header */}
-            <WorkspaceSessionHeader scenario={scenario} />
-
             {/* Rendered blocks */}
             {scenario.blocks.slice(0, visibleBlocks).map((block, idx) => (
               <motion.div

@@ -219,7 +219,7 @@ export function getWorkspaceContext(workspaceId: WorkspaceId): WorkspaceContext 
           'Cohort analysis and correlation',
           'Regional outage management',
           'Firmware regression analysis',
-          'Traffic anomaly detection',
+          'Rollout risk interpretation',
           'Predictive rollout risk scoring',
         ],
       };

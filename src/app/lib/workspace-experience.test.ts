@@ -3,9 +3,12 @@ import {
   WORKSPACE_EXPERIENCE,
   getScopeCommandOptionsForWorkspace,
   getWorkspaceDefaultScope,
+  getSupportPresetQueryMatch,
+  getWorkspaceScopeActions,
   getWorkspaceScopeConfig,
   getWorkspaceScopePaletteStateForTarget,
 } from './workspace-experience';
+import { resolveScenarioForWorkspace } from './scenario-resolver';
 
 describe('workspace experience', () => {
   it('defines an AI-first fleet workspace with cohort scope and predictive reasoning', () => {
@@ -93,5 +96,65 @@ describe('workspace experience', () => {
       'Campaign',
       'Subscriber',
     ]);
+  });
+
+  it('maps representative scope actions in each workspace to concrete demo scenarios', () => {
+    const fleetAction = getWorkspaceScopeActions('fleet', {
+      level: 'organization',
+      region: 'north',
+      organization: 'acme-isp',
+    })[0];
+    expect(fleetAction.scenarioId).toBe('firmware-regression');
+    expect(
+      resolveScenarioForWorkspace(
+        fleetAction.prompt,
+        'fleet',
+        fleetAction.scenarioId,
+      )?.id,
+    ).toBe('firmware-regression');
+
+    const supportAction = getWorkspaceScopeActions('support', {
+      level: 'device',
+      region: 'SUB-1234',
+      organization: 'home-sub-1234',
+      subscriber: 'GW-7834-HOME',
+      device: 'GW-7834-HOME-iphone',
+    })[0];
+    expect(supportAction.scenarioId).toBe('autonomous-wifi-recovery');
+    expect(
+      resolveScenarioForWorkspace(
+        supportAction.prompt,
+        'support',
+        supportAction.scenarioId,
+      )?.id,
+    ).toBe('autonomous-wifi-recovery');
+
+    const growthAction = getWorkspaceScopeActions('growth', {
+      level: 'subscriber',
+      region: 'bandwidth-constrained-households',
+      organization: 'premium-upgrade-q2',
+      subscriber: 'SUB-7834',
+    })[0];
+    expect(growthAction.scenarioId).toBe('bandwidth-upsell');
+    expect(
+      resolveScenarioForWorkspace(
+        growthAction.prompt,
+        'growth',
+        growthAction.scenarioId,
+      )?.id,
+    ).toBe('bandwidth-upsell');
+  });
+
+  it('restores the slow-internet top question to the known support case', () => {
+    expect(
+      getSupportPresetQueryMatch(
+        'This subscriber reports slow internet. What did AI find?',
+      ),
+    ).toEqual({
+      kind: 'ticket',
+      ticketId: 'TKT-4820',
+      intro:
+        'I found the related slow-speed case. Here is what AI diagnosed, how it fixed it, and what was verified afterward.',
+    });
   });
 });

@@ -6,6 +6,7 @@ export interface ScenarioCard {
   description: string;
   query: string;
   icon: string;
+  scenarioId?: string;
   hidden?: boolean;
 }
 
@@ -15,6 +16,7 @@ export interface ScopeActionCard {
   description: string;
   prompt: string;
   action?: string;
+  scenarioId?: string;
   hidden?: boolean;
 }
 

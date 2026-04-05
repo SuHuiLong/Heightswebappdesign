@@ -200,17 +200,6 @@ function WorkspacePanel({ workspace, cardSettings }: { workspace: WorkspaceKey; 
       {/* Body — only when expanded */}
       {open && (
         <div className="px-3 pb-3 space-y-3 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-          {/* Scenarios */}
-          <CompactCardList
-            title="What You Can Ask"
-            icon="scenario"
-            cards={scenarios}
-            onToggle={(id) => cardSettings.updateScenario(workspace, id, { hidden: !scenarios.find(c => c.id === id)?.hidden })}
-            onReset={() => cardSettings.initScenarios(workspace, DEFAULT_SCENARIOS[workspace])}
-            workspace={workspace}
-            cardSettings={cardSettings}
-          />
-
           {/* Scope Actions by level */}
           <CompactScopeList
             scopeActions={scopeActions}

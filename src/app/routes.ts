@@ -15,9 +15,9 @@ export const router = createBrowserRouter([
       Component: (await import("./pages/fleet-overview")).FleetOverview,
     }),
   },
-  // Operations Workspace
+  // Fleet Intelligence Workspace
   {
-    path: "/operations",
+    path: "/fleet-intelligence",
     lazy: async () => ({
       Component: (await import("./pages/workspace-operations")).OperationsWorkspace,
     }),

@@ -110,13 +110,13 @@ function WorkspaceSessionHeader({ scenario }: { scenario: ScenarioDefinition }) 
         : 'var(--warning)';
 
   const familyLabel =
-    scenario.family === 'operations'
-      ? 'Operations'
+    scenario.family === 'fleet'
+      ? 'Fleet'
       : scenario.family === 'business'
         ? 'Business'
         : 'Planning';
 
-  const familyIcon = scenario.family === 'operations' ? Shield : scenario.family === 'business' ? Layers : Clock;
+  const familyIcon = scenario.family === 'fleet' ? Shield : scenario.family === 'business' ? Layers : Clock;
 
   const FamilyIcon = familyIcon;
 

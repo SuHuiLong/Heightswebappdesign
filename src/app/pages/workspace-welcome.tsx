@@ -5,7 +5,7 @@ import { WORKSPACES } from '../lib/workspace-definitions';
 import { useReducedMotion } from 'motion/react';
 
 const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
-  operations: [
+  fleet: [
     'What anomaly patterns has AI detected this week that I have not seen yet?',
     'Predict which cohorts will hit memory pressure in the next 7 days',
   ],
@@ -20,7 +20,7 @@ const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
 };
 
 const WORKSPACE_CONFIG = {
-  operations: { route: '/operations', icon: Activity },
+  fleet: { route: '/fleet-intelligence', icon: Activity },
   support: { route: '/support', icon: Users },
   growth: { route: '/growth', icon: TrendingUp },
 } as const;

@@ -80,7 +80,7 @@ interface ScopeQuickAction {
 }
 
 function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
-  return getWorkspaceScopeActions('operations', scope);
+  return getWorkspaceScopeActions('fleet', scope);
 }
 
 /** All scope action IDs used by this workspace (for settings management) */
@@ -417,7 +417,7 @@ function getScopeCommandOptions(
 
 export function OperationsWorkspace() {
   const shouldReduceMotion = useReducedMotion();
-  const experience = useMemo(() => getWorkspaceExperience('operations'), []);
+  const experience = useMemo(() => getWorkspaceExperience('fleet'), []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -429,7 +429,7 @@ export function OperationsWorkspace() {
   const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [cursorGlow, setCursorGlow] = useState({ x: 0, y: 0, active: false });
   const [currentScope, setCurrentScope] = useState<ScopeSelection>(
-    getWorkspaceDefaultScope('operations'),
+    getWorkspaceDefaultScope('fleet'),
   );
   const [hasInteracted, setHasInteracted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -439,24 +439,24 @@ export function OperationsWorkspace() {
       timestamp: getTimestamp(),
     },
   ]);
-  const { recentQuestions, addToRecent } = useRecentQuestions('operations');
+  const { recentQuestions, addToRecent } = useRecentQuestions('fleet');
 
   // Workspace cards from settings
-  const visibleScenarios = useWorkspaceCards(OPERATIONS_SCENARIOS, 'operations', 'scenarios');
-  const scopeActionOverrides = useScopeActionOverrides('operations');
+  const visibleScenarios = useWorkspaceCards(OPERATIONS_SCENARIOS, 'fleet', 'scenarios');
+  const scopeActionOverrides = useScopeActionOverrides('fleet');
 
   // Scope palette state
   const [scopePaletteState, setScopePaletteState] = useState<ScopePaletteState>(
     getWorkspaceScopePaletteStateForTarget(
-      'operations',
+      'fleet',
       null,
-      getWorkspaceDefaultScope('operations'),
+      getWorkspaceDefaultScope('fleet'),
     ),
   );
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
-  const workspaceContext = useMemo(() => getWorkspaceContext('operations'), []);
-  const starterTasks = useMemo(() => WORKSPACE_STARTER_TASKS.operations, []);
+  const workspaceContext = useMemo(() => getWorkspaceContext('fleet'), []);
+  const starterTasks = useMemo(() => WORKSPACE_STARTER_TASKS.fleet, []);
   const currentScopeActions = useMemo(() => getScopeActions(currentScope).map(a => {
     const o = scopeActionOverrides.get(a.id);
     if (!o) return a;
@@ -473,7 +473,7 @@ export function OperationsWorkspace() {
   const scopeCommandOptions = useMemo(
     () =>
       getScopeCommandOptionsForWorkspace(
-        'operations',
+        'fleet',
         scopePaletteState,
         scopePaletteQuery,
         currentScope,
@@ -491,14 +491,14 @@ export function OperationsWorkspace() {
   useEffect(() => {
     if (!isScopeCommandMode) {
       setScopePaletteState(
-        getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+        getWorkspaceScopePaletteStateForTarget('fleet', null, currentScope),
       );
       return;
     }
 
     setScopePaletteState(
       getWorkspaceScopePaletteStateForTarget(
-        'operations',
+        'fleet',
         parsedScopeCommand?.command ?? null,
         currentScope,
       ),
@@ -600,7 +600,7 @@ export function OperationsWorkspace() {
     setInput('');
     setActiveCommandIndex(0);
     setScopePaletteState(
-      getWorkspaceScopePaletteStateForTarget('operations', null, scope),
+      getWorkspaceScopePaletteStateForTarget('fleet', null, scope),
     );
     handleScopeChange(scope);
   };
@@ -664,7 +664,7 @@ export function OperationsWorkspace() {
       setInput('');
       setActiveCommandIndex(0);
       setScopePaletteState(
-        getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+        getWorkspaceScopePaletteStateForTarget('fleet', null, currentScope),
       );
       return;
     }
@@ -676,7 +676,7 @@ export function OperationsWorkspace() {
 
       if (scopePaletteState.step === 'region') {
         setScopePaletteState(
-          getWorkspaceScopePaletteStateForTarget('operations', null, currentScope),
+          getWorkspaceScopePaletteStateForTarget('fleet', null, currentScope),
         );
         return;
       }
@@ -1100,7 +1100,7 @@ export function OperationsWorkspace() {
                     ·
                   </span>
                   <span className="text-xs font-semibold" style={{ color: 'var(--neutral-500)' }}>
-                    {getWorkspaceScopeTagLabel('operations', currentScope)}
+                    {getWorkspaceScopeTagLabel('fleet', currentScope)}
                   </span>
                   <span className="text-xs" style={{ color: 'var(--neutral-400)' }}>
                     · Type / to change
@@ -1206,7 +1206,7 @@ export function OperationsWorkspace() {
                             </span>
                           </div>
                           <div className="space-y-0.5">
-                            {WORKSPACES.operations.topQuestions.map((q, i) => (
+                            {WORKSPACES.fleet.topQuestions.map((q, i) => (
                               <button
                                 key={i}
                                 type="button"
@@ -1246,11 +1246,11 @@ export function OperationsWorkspace() {
                         </div>
                         <div className="border-b px-3 py-2 text-[11px]" style={{ borderColor: 'var(--border-subtle)' }}>
                           <span className="font-medium" style={{ color: 'var(--foreground)' }}>
-                            {getWorkspaceScopePalettePlaceholder('operations', scopePaletteState)}
+                            {getWorkspaceScopePalettePlaceholder('fleet', scopePaletteState)}
                           </span>
-                          {getWorkspaceScopePaletteContextLabel('operations', scopePaletteState) && (
+                          {getWorkspaceScopePaletteContextLabel('fleet', scopePaletteState) && (
                             <span className="ml-2" style={{ color: 'var(--neutral-400)' }}>
-                              {getWorkspaceScopePaletteContextLabel('operations', scopePaletteState)}
+                              {getWorkspaceScopePaletteContextLabel('fleet', scopePaletteState)}
                             </span>
                           )}
                         </div>
@@ -1316,7 +1316,7 @@ export function OperationsWorkspace() {
 
         {/* Right Panel - Reasoning / Actions / Audit */}
         <WorkspaceRightPanel
-          workspaceId="operations"
+          workspaceId="fleet"
           isActive={isTyping}
         />
       </div>

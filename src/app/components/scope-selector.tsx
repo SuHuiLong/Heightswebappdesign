@@ -169,7 +169,7 @@ export function ScopeSelector({
   value,
   onChange,
   compact = false,
-  workspaceId = 'operations',
+  workspaceId = 'fleet',
 }: ScopeSelectorProps) {
   const [openLevel, setOpenLevel] = useState<WorkspaceScopeLevel | null>(null);
   const scopeSpec = getWorkspaceScopeConfig(workspaceId);

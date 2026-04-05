@@ -23,7 +23,7 @@ export interface WorkspaceCardSettings {
   scopeActions: ScopeActionCard[];
 }
 
-export type WorkspaceKey = 'operations' | 'support' | 'growth';
+export type WorkspaceKey = 'fleet' | 'support' | 'growth';
 
 const STORAGE_KEY = 'heights-workspace-card-settings';
 const SETTINGS_CHANGED_EVENT = 'heights-card-settings-changed';

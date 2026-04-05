@@ -206,7 +206,7 @@ const GROWTH_SCOPE_SPEC: WorkspaceScopeSpec = {
 };
 
 const WORKSPACE_SCOPE_SPECS: Record<WorkspaceId, WorkspaceScopeSpec> = {
-  operations: OPERATIONS_SCOPE_SPEC,
+  fleet: OPERATIONS_SCOPE_SPEC,
   support: SUPPORT_SCOPE_SPEC,
   growth: GROWTH_SCOPE_SPEC,
 };
@@ -453,16 +453,16 @@ export const GROWTH_SCENARIOS: WorkspaceScenarioCard[] = [
     icon: 'alert-triangle',
   },
   {
-    id: 'grw-premium-wifi',
-    title: 'Premium Wi-Fi Conversion',
-    description: 'The latest campaign shows strong QoE-driven conversion potential in targeted segments.',
-    query: 'Review the Premium Wi-Fi conversion funnel and forecast revenue impact if we expand the current campaign.',
+    id: 'grw-vas-opportunity',
+    title: 'VAS Opportunity',
+    description: '847 households have gaming consoles or children\'s devices but no parental control subscription.',
+    query: 'Identify households with devices that indicate untapped VAS potential (gaming consoles, children\'s devices) but no corresponding subscription.',
     icon: 'sparkles',
   },
 ];
 
 function buildOperationsScopeActions(scope: ScopeSelection): WorkspaceScopeActionCard[] {
-  const label = getWorkspaceScopeDisplayLabel('operations', scope);
+  const label = getWorkspaceScopeDisplayLabel('fleet', scope);
 
   switch (scope.level) {
     case 'region':
@@ -794,10 +794,10 @@ function buildGrowthScopeActions(scope: ScopeSelection): WorkspaceScopeActionCar
           prompt: 'Show subscribers at churn risk who have no open tickets and explain the early warning signals.',
         },
         {
-          id: 'all-premium-wifi-funnel',
-          title: 'Premium Wi-Fi conversion funnel',
-          description: 'Review conversion performance for the Premium Wi-Fi motion.',
-          prompt: 'Show the Premium Wi-Fi conversion funnel and highlight the main drop-off stages.',
+          id: 'all-vas-opportunity',
+          title: 'VAS opportunity scan',
+          description: 'Find households with devices that indicate untapped VAS potential.',
+          prompt: 'Identify households with gaming consoles or children\'s devices but no parental control subscription, and estimate the revenue opportunity.',
         },
         {
           id: 'all-campaign-roi',
@@ -866,7 +866,7 @@ const ALL_GROWTH_SCOPE_ACTIONS = [
 export { ALL_OPS_SCOPE_ACTIONS, ALL_SUPPORT_SCOPE_ACTIONS, ALL_GROWTH_SCOPE_ACTIONS };
 
 export const WORKSPACE_EXPERIENCE: Record<WorkspaceId, WorkspaceExperienceConfig> = {
-  operations: {
+  fleet: {
     displayName: 'Fleet Intelligence',
     initialMessage:
       '12,458 online. 23 degraded. 1 emerging pattern: FW 2.1.3 memory trend across Region North projected critical in ~5 days.',
@@ -1391,7 +1391,7 @@ function getScopeOptionsForLevel(
   state: ScopePaletteState,
 ) {
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       return getOperationsScopeOptions(level, state);
     case 'support':
       return getSupportScopeOptions(level, state);
@@ -1558,7 +1558,7 @@ export function getWorkspaceScopeConfig(workspaceId: WorkspaceId) {
 
 export function getWorkspaceDefaultScope(workspaceId: WorkspaceId): ScopeSelection {
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       return { level: 'all' };
     case 'support':
       return { level: 'region' };
@@ -1604,7 +1604,7 @@ export function getWorkspaceScopeDisplayLabel(
   scope: ScopeSelection,
 ) {
   switch (workspaceId) {
-    case 'operations': {
+    case 'fleet': {
       switch (scope.level) {
         case 'all':
           return 'all fleet regions';
@@ -1687,7 +1687,7 @@ export function getWorkspaceScopeSelectorLabel(
   scope: ScopeSelection,
 ) {
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       if (level === 'all') {
         return scope.level === 'all' ? 'All (Fleet)' : 'All (Fleet)';
       }
@@ -1767,7 +1767,7 @@ export function getWorkspaceScopePaletteContextLabel(
   const parts: string[] = [];
 
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       if (state.region) {
         parts.push(REGION_LABELS[state.region] ?? state.region);
       }
@@ -1826,7 +1826,7 @@ export function getWorkspaceScopeActions(
   scope: ScopeSelection,
 ) {
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       return buildOperationsScopeActions(scope);
     case 'support':
       return buildSupportScopeActions(scope);

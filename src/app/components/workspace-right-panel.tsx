@@ -148,7 +148,7 @@ export function WorkspaceRightPanel({
   const audit = auditEntries ?? experience.reasoning.auditEntries;
 
   const accentColor =
-    workspaceId === 'operations' ? 'var(--primary)' :
+    workspaceId === 'fleet' ? 'var(--primary)' :
     workspaceId === 'support' ? 'var(--ambient-cyan)' :
     'var(--ambient-warm)';
 

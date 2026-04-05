@@ -7,7 +7,7 @@
  * - Growth: Opportunities, segments, upsell (reserved for future)
  */
 
-export type WorkspaceId = 'operations' | 'support' | 'growth';
+export type WorkspaceId = 'fleet' | 'support' | 'growth';
 
 export interface WorkspaceDefinition {
   id: WorkspaceId;
@@ -30,8 +30,8 @@ export interface WorkspaceDefinition {
 }
 
 export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
-  operations: {
-    id: 'operations',
+  fleet: {
+    id: 'fleet',
     name: 'Fleet Intelligence',
     description: 'AI-discovered fleet patterns, predictive risks, and rollout health across the network.',
     tagline: 'AI-discovered patterns across your network',
@@ -96,19 +96,19 @@ export const WORKSPACES: Record<WorkspaceId, WorkspaceDefinition> = {
     exampleScenarios: [
       'Pre-Churn Rescue',
       'Bandwidth Upsell Opportunities',
-      'Premium Wi-Fi Conversion',
+      'VAS Opportunity',
     ],
     accentColor: 'var(--ambient-warm)',
     isImplemented: true,
     recentQuestions: [
       'Show this week’s top 10 upsell candidates',
       'Which subscribers are at churn risk with no open tickets?',
-      'Show the Premium Wi-Fi conversion funnel',
+      'Identify households with untapped VAS potential',
     ],
     topQuestions: [
       'Which subscribers will likely churn in the next 30 days?',
       'Predict upsell conversion rate if we target bandwidth-constrained households',
-      'What is the projected revenue impact of Premium Wi-Fi expansion?',
+      'What is the projected revenue impact of VAS expansion?',
       'Which segments have the highest upsell confidence this month?',
     ],
   },
@@ -123,7 +123,7 @@ export interface WorkspaceStarterTask {
 }
 
 export const WORKSPACE_STARTER_TASKS: Record<WorkspaceId, WorkspaceStarterTask[]> = {
-  operations: [
+  fleet: [
     {
       id: 'ops-1',
       title: 'FW 2.1.3 Memory Regression',
@@ -192,9 +192,9 @@ export const WORKSPACE_STARTER_TASKS: Record<WorkspaceId, WorkspaceStarterTask[]
     },
     {
       id: 'grw-3',
-      title: 'Premium Wi-Fi Funnel',
-      description: 'Review conversion and drop-off for the current Premium Wi-Fi motion',
-      prompt: 'Show the Premium Wi-Fi conversion funnel and highlight the main drop-off stages.',
+      title: 'VAS Opportunity',
+      description: 'Find households with devices indicating untapped value-added service potential',
+      prompt: 'Identify households with gaming consoles or children\'s devices but no parental control subscription, and estimate revenue impact.',
     },
   ],
 };
@@ -210,7 +210,7 @@ export function getWorkspaceContext(workspaceId: WorkspaceId): WorkspaceContext 
   const workspace = WORKSPACES[workspaceId];
 
   switch (workspaceId) {
-    case 'operations':
+    case 'fleet':
       return {
         workspace: workspaceId,
         primaryScope: 'fleet, region, organization, cohort',

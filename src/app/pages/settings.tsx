@@ -25,7 +25,7 @@ import { GROWTH_SCENARIOS, ALL_GROWTH_SCOPE_ACTIONS } from './workspace-growth';
 import { getWorkspaceScopeConfig } from '../lib/workspace-experience';
 
 const WORKSPACE_META: Record<WorkspaceKey, { label: string; color: string }> = {
-  operations: { label: 'Fleet Intelligence', color: 'var(--ambient-violet)' },
+  fleet: { label: 'Fleet Intelligence', color: 'var(--ambient-violet)' },
   support: { label: 'Support', color: 'var(--ambient-cyan)' },
   growth: { label: 'Growth', color: 'var(--ambient-amber)' },
 };
@@ -39,13 +39,13 @@ function toScopeActionCards(items: { id: string; title: string; description: str
 }
 
 const DEFAULT_SCENARIOS: Record<WorkspaceKey, ScenarioCard[]> = {
-  operations: toScenarioCards(OPERATIONS_SCENARIOS),
+  fleet: toScenarioCards(OPERATIONS_SCENARIOS),
   support: toScenarioCards(SUPPORT_SCENARIOS),
   growth: toScenarioCards(GROWTH_SCENARIOS),
 };
 
 const DEFAULT_SCOPE_ACTIONS: Record<WorkspaceKey, ScopeActionCard[]> = {
-  operations: toScopeActionCards(ALL_OPS_SCOPE_ACTIONS),
+  fleet: toScopeActionCards(ALL_OPS_SCOPE_ACTIONS),
   support: toScopeActionCards(ALL_SUPPORT_SCOPE_ACTIONS),
   growth: toScopeActionCards(ALL_GROWTH_SCOPE_ACTIONS),
 };

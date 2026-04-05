@@ -252,7 +252,7 @@ export function FleetOverview() {
                 <span style={{ color: 'var(--neutral-400)' }}>Last updated: just now</span>
               </div>
               <Link
-                to="/operations"
+                to="/fleet-intelligence"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                 style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
               >
@@ -371,8 +371,8 @@ export function FleetOverview() {
             </h3>
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'Open Fleet Intelligence', to: '/operations', icon: Activity },
-                { label: 'View Active Incidents', to: '/operations', icon: AlertTriangle },
+                { label: 'Open Fleet Intelligence', to: '/fleet-intelligence', icon: Activity },
+                { label: 'View Active Incidents', to: '/fleet-intelligence', icon: AlertTriangle },
                 { label: 'Support Ticket Queue', to: '/support', icon: CheckCircle2 },
                 { label: 'Growth Opportunities', to: '/growth', icon: TrendingUp },
               ].map((action) => (

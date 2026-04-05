@@ -9,16 +9,16 @@ import {
 
 describe('workspace experience', () => {
   it('defines an AI-first fleet workspace with cohort scope and predictive reasoning', () => {
-    expect(WORKSPACE_EXPERIENCE.operations.displayName).toBe('Fleet Intelligence');
-    expect(WORKSPACE_EXPERIENCE.operations.initialMessage).toContain('FW 2.1.3');
-    expect(WORKSPACE_EXPERIENCE.operations.scenarioHeading).toBe('AI DETECTED');
-    expect(WORKSPACE_EXPERIENCE.operations.reasoning.idleSteps.map((step) => step.label)).toEqual([
+    expect(WORKSPACE_EXPERIENCE.fleet.displayName).toBe('Fleet Intelligence');
+    expect(WORKSPACE_EXPERIENCE.fleet.initialMessage).toContain('FW 2.1.3');
+    expect(WORKSPACE_EXPERIENCE.fleet.scenarioHeading).toBe('AI DETECTED');
+    expect(WORKSPACE_EXPERIENCE.fleet.reasoning.idleSteps.map((step) => step.label)).toEqual([
       'Fleet health baseline',
       'Anomaly detection',
       'Predictive risk',
     ]);
 
-    const spec = getWorkspaceScopeConfig('operations');
+    const spec = getWorkspaceScopeConfig('fleet');
     expect(spec.levelOrder).toEqual(['all', 'region', 'organization', 'subscriber']);
     expect(spec.levelLabels).toMatchObject({
       all: 'All (Fleet)',

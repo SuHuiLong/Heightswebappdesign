@@ -148,7 +148,7 @@ export interface ScenarioDefinition {
   /** Follow-up prompt suggestions */
   followUps: string[];
   /** Scenario family for grouping */
-  family: 'operations' | 'business' | 'planning';
+  family: 'fleet' | 'business' | 'planning';
   /** Keyword triggers for matching user queries */
   keywords: string[];
   /** Rendered content blocks */
@@ -186,7 +186,7 @@ const firmwareRegression: ScenarioDefinition = {
     'Which regions are most affected?',
     'Generate a bug report for the firmware team',
   ],
-  family: 'operations',
+  family: 'fleet',
   keywords: [
     'firmware', 'connection drop', 'iop', 'broadcom', 'gateway', 'unusual',
     'haystack', 'mac vendor', 'rollback', 'bug report', 'firmware update',
@@ -300,7 +300,7 @@ const dpiTrafficAnomalies: ScenarioDefinition = {
     'What is the TLS classification accuracy trend?',
     'Export the full anomaly report as PDF',
   ],
-  family: 'operations',
+  family: 'fleet',
   keywords: [
     'dpi', 'traffic', 'streaming', 'gaming', 'tls', 'anomaly', 'classification',
     'europe', 'l7', 'encrypted', 'unknown', 'report', 'pdf',
@@ -382,7 +382,7 @@ const regionalIncident: ScenarioDefinition = {
     'What is the estimated time to resolution?',
     'Generate incident report for the NOC team',
   ],
-  family: 'operations',
+  family: 'fleet',
   keywords: [
     'outage', 'incident', 'region', 'bgp', 'route', 'flapping', 'degradation',
     'correlated', 'pop', 'impact', 'subscribers affected',
@@ -817,7 +817,7 @@ const autonomousWifiRecovery: ScenarioDefinition = {
     'Has this subscriber had similar issues before?',
     'View the gateway diagnostic log',
   ],
-  family: 'operations',
+  family: 'fleet',
   keywords: [
     'wifi', 'recovery', 'self-healing', 'autonomous', 'channel', 'optimization',
     'local', 'degradation', 'case', 'closed', 'recovery',
@@ -881,7 +881,7 @@ const criticalSessionProtection: ScenarioDefinition = {
     'View session quality metrics during protection',
     'How many sessions were protected this week?',
   ],
-  family: 'operations',
+  family: 'fleet',
   keywords: [
     'session', 'protection', 'critical', 'qos', 'video', 'conference', 'high-value',
     'interference', 'safeguard', 'priority', 'real-time',

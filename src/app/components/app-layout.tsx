@@ -43,7 +43,7 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
   };
 
   const navItems = [
-    { path: '/operations', label: 'Command Center', icon: Activity },
+    { path: '/fleet-intelligence', label: 'Command Center', icon: Activity },
     { path: '/audit', label: 'Audit', icon: FileText },
     { path: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
@@ -52,17 +52,17 @@ export function AppLayout({ children, rightPanel, showTopBar = true, scopeIndica
     path: string;
     label: string;
     icon: typeof Activity;
-    id: 'operations' | 'support' | 'growth';
+    id: 'fleet' | 'support' | 'growth';
   }> = [
-    { path: '/operations', label: 'Fleet Intelligence', icon: Activity, id: 'operations' },
+    { path: '/fleet-intelligence', label: 'Fleet Intelligence', icon: Activity, id: 'fleet' },
     { path: '/support', label: 'Support', icon: Users, id: 'support' },
     { path: '/growth', label: 'Growth', icon: TrendingUp, id: 'growth' },
   ];
 
   // Check if current page should show workspace switcher
-  const isWorkspacePage = location.pathname === '/operations' || location.pathname === '/support' || location.pathname === '/growth';
+  const isWorkspacePage = location.pathname === '/fleet-intelligence' || location.pathname === '/support' || location.pathname === '/growth';
   const activeWorkspace =
-    workspaceItems.find((item) => item.path === location.pathname)?.id ?? 'operations';
+    workspaceItems.find((item) => item.path === location.pathname)?.id ?? 'fleet';
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {showTopBar && (

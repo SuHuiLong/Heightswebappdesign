@@ -4,102 +4,102 @@
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size: 16px;
 
-  /* Graphite Core */
-  --background: #0b0f14;
-  --foreground: #e6edf3;
+  /* Heights Dark */
+  --background: #0a0a0a;
+  --foreground: #ededed;
 
-  --primary: #1d9bf0;
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --primary-hover: #1a8cd8;
+  --primary-hover: #2563eb;
 
-  --secondary: #141a21;
-  --secondary-foreground: #d3dbe4;
+  --secondary: #171717;
+  --secondary-foreground: #ededed;
 
-  --accent-color: #151c24;
-  --accent-foreground: #e6edf3;
-  --accent-hover: #1a232d;
+  --accent-color: #1e1e1e;
+  --accent-foreground: #ededed;
+  --accent-hover: #2a2a2a;
 
-  --muted: #0f141a;
-  --muted-foreground: #8b98a5;
+  --muted: #141414;
+  --muted-foreground: #a3a3a3;
 
-  --success: #2ea043;
+  --success: #10b981;
   --success-foreground: #f0fff4;
-  --success-bg: #0f2016;
-  --success-border: #1d3a26;
+  --success-bg: #08241c;
+  --success-border: #124436;
 
-  --warning: #d29922;
+  --warning: #f59e0b;
   --warning-foreground: #fff8e1;
-  --warning-bg: #221a0d;
-  --warning-border: #3a2e16;
+  --warning-bg: #261807;
+  --warning-border: #5b3a0b;
 
-  --critical: #f4212e;
+  --critical: #ef4444;
   --critical-foreground: #fff5f5;
-  --critical-bg: #241013;
-  --critical-border: #472126;
+  --critical-bg: #2b1212;
+  --critical-border: #5f2323;
 
   --destructive: var(--critical);
   --destructive-foreground: var(--critical-foreground);
 
-  --neutral-50: #151b22;
-  --neutral-100: #1c232b;
-  --neutral-200: #27313a;
-  --neutral-300: #33404c;
-  --neutral-400: #556370;
-  --neutral-500: #8b98a5;
-  --neutral-600: #a7b3bf;
-  --neutral-700: #c2ccd6;
-  --neutral-800: #d6dde4;
-  --neutral-900: #e6edf3;
+  --neutral-50: #121212;
+  --neutral-100: #171717;
+  --neutral-200: #1f1f1f;
+  --neutral-300: #2a2a2a;
+  --neutral-400: #525252;
+  --neutral-500: #a3a3a3;
+  --neutral-600: #cfcfcf;
+  --neutral-700: #dddddd;
+  --neutral-800: #e7e7e7;
+  --neutral-900: #f5f5f5;
 
-  --surface-base: #11161d;
-  --surface-raised: #161b22;
-  --surface-overlay: #1b222b;
+  --surface-base: #121212;
+  --surface-raised: #1e1e1e;
+  --surface-overlay: #2a2a2a;
 
-  --card: #161b22;
-  --card-foreground: #e6edf3;
+  --card: #121212;
+  --card-foreground: #ededed;
 
-  --popover: #1b222b;
-  --popover-foreground: #e6edf3;
+  --popover: #171717;
+  --popover-foreground: #ededed;
 
-  --border: #27313a;
-  --border-strong: #33404c;
-  --border-subtle: #1c232b;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --border-subtle: #1e1e1e;
 
-  --input: #27313a;
-  --input-background: #0f141a;
-  --ring: #1d9bf0;
-  --focus-ring: rgba(29, 155, 240, 0.24);
-  --overlay-scrim: rgba(2, 8, 16, 0.72);
-  --ambient-blue: rgba(29, 155, 240, 0.18);
-  --ambient-cyan: rgba(34, 211, 238, 0.1);
-  --ambient-violet: rgba(99, 102, 241, 0.08);
-  --ambient-warm: rgba(245, 158, 11, 0.06);
-  --cursor-glow: rgba(120, 196, 255, 0.12);
-  --card-glow: rgba(120, 196, 255, 0.08);
+  --input: #2a2a2a;
+  --input-background: #101010;
+  --ring: #3b82f6;
+  --focus-ring: rgba(59, 130, 246, 0.22);
+  --overlay-scrim: rgba(5, 5, 5, 0.74);
+  --ambient-blue: #3b82f6;
+  --ambient-cyan: #06b6d4;
+  --ambient-violet: #8b5cf6;
+  --ambient-warm: #f97316;
+  --cursor-glow: rgba(59, 130, 246, 0.16);
+  --card-glow: rgba(59, 130, 246, 0.12);
 
-  --disabled-bg: #121920;
-  --disabled-text: #596673;
-  --disabled-border: #202833;
+  --disabled-bg: #141414;
+  --disabled-text: #6b7280;
+  --disabled-border: #262626;
 
-  --severity-info: #1d9bf0;
-  --severity-info-bg: #10283f;
-  --severity-low: #2ea043;
-  --severity-low-bg: #0f2016;
-  --severity-medium: #d29922;
-  --severity-medium-bg: #221a0d;
-  --severity-high: #ff7a00;
-  --severity-high-bg: #2a1708;
-  --severity-critical: #f4212e;
-  --severity-critical-bg: #241013;
+  --severity-info: #3b82f6;
+  --severity-info-bg: #102243;
+  --severity-low: #10b981;
+  --severity-low-bg: #08241c;
+  --severity-medium: #f59e0b;
+  --severity-medium-bg: #261807;
+  --severity-high: #f97316;
+  --severity-high-bg: #311707;
+  --severity-critical: #ef4444;
+  --severity-critical-bg: #2b1212;
 
-  --sidebar: #0f141a;
-  --sidebar-foreground: #d6dde4;
-  --sidebar-primary: #161d26;
-  --sidebar-primary-foreground: #e6edf3;
-  --sidebar-accent: #141a21;
-  --sidebar-accent-foreground: #d6dde4;
-  --sidebar-border: #202833;
-  --sidebar-ring: #1d9bf0;
+  --sidebar: #0f0f0f;
+  --sidebar-foreground: #d4d4d4;
+  --sidebar-primary: #171717;
+  --sidebar-primary-foreground: #ededed;
+  --sidebar-accent: #151515;
+  --sidebar-accent-foreground: #d4d4d4;
+  --sidebar-border: #242424;
+  --sidebar-ring: #3b82f6;
 
   --spacing-1: 0.5rem;
   --spacing-2: 1rem;
@@ -119,14 +119,14 @@
   --font-weight-bold: 700;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.22);
-  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.34);
+  --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 20px 48px rgba(0, 0, 0, 0.4);
 
-  --chart-1: #1d9bf0;
-  --chart-2: #2ea043;
+  --chart-1: #3b82f6;
+  --chart-2: #10b981;
   --chart-3: #8b5cf6;
-  --chart-4: #d29922;
-  --chart-5: #f4212e;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
 }
 
 .light {
@@ -229,6 +229,9 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -237,9 +240,13 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--input);
   --color-input-background: var(--input-background);
   --color-ring: var(--ring);
@@ -282,7 +289,7 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-image: radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 34%);
+    background-image: radial-gradient(circle at top, rgba(59, 130, 246, 0.1), transparent 34%);
   }
 
   html.light body {

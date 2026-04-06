@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
-import { Activity, Users, TrendingUp, ArrowRight, ChevronRight, Sparkles } from 'lucide-react';
+import { Activity, TrendingUp, ArrowRight, ChevronRight, Sparkles, Users } from 'lucide-react';
 import { WORKSPACES } from '../lib/workspace-definitions';
 import { useReducedMotion } from 'motion/react';
 
@@ -20,230 +20,186 @@ const SUGGESTED_INVESTIGATIONS: Record<keyof typeof WORKSPACES, string[]> = {
 };
 
 const WORKSPACE_CONFIG = {
-  fleet: { route: '/fleet-intelligence', icon: Activity },
-  support: { route: '/support', icon: Users },
-  growth: { route: '/growth', icon: TrendingUp },
+  fleet: { route: '/fleet-intelligence', icon: Activity, iconShellClassName: 'rounded-2xl text-white shadow-lg' },
+  support: { route: '/support', icon: Users, iconShellClassName: 'rounded-2xl text-white shadow-lg' },
+  growth: { route: '/growth', icon: TrendingUp, iconShellClassName: 'rounded-2xl text-white shadow-lg' },
 } as const;
 
 export function WorkspaceWelcome() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--background)' }}>
-      {/* Ambient background effects */}
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.035),_transparent_38%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_34%)]" />
         <div
-          className="ambient-drift absolute -left-[10%] top-[-10%] h-[28rem] w-[28rem] rounded-full blur-3xl"
+          className="ambient-drift absolute -left-[8%] top-[-8%] h-[26rem] w-[26rem] rounded-full blur-3xl"
           style={{
             background: 'radial-gradient(circle, var(--ambient-blue) 0%, transparent 68%)',
+            opacity: 0.18,
           }}
         />
         <div
-          className="ambient-float absolute right-[-8%] top-[12%] h-[24rem] w-[24rem] rounded-full blur-3xl"
+          className="ambient-float absolute right-[-6%] top-[10%] h-[22rem] w-[22rem] rounded-full blur-3xl"
           style={{
             background: 'radial-gradient(circle, var(--ambient-cyan) 0%, transparent 70%)',
+            opacity: 0.16,
           }}
         />
         <div
-          className="ambient-drift absolute bottom-[-18%] left-[24%] h-[22rem] w-[22rem] rounded-full blur-3xl"
+          className="ambient-drift absolute bottom-[-16%] left-[24%] h-[20rem] w-[20rem] rounded-full blur-3xl"
           style={{
             background: 'radial-gradient(circle, var(--ambient-violet) 0%, transparent 72%)',
             animationDelay: '-6s',
+            opacity: 0.12,
           }}
         />
         <div
-          className="ambient-float absolute bottom-[-10%] right-[8%] h-[18rem] w-[18rem] rounded-full blur-3xl"
+          className="ambient-float absolute bottom-[-10%] right-[10%] h-[16rem] w-[16rem] rounded-full blur-3xl"
           style={{
             background: 'radial-gradient(circle, var(--ambient-warm) 0%, transparent 72%)',
             animationDelay: '-9s',
+            opacity: 0.12,
           }}
         />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 border-b px-6 py-4" style={{ borderColor: 'var(--border)', background: 'var(--surface-base)' }}>
+      <header className="relative z-10 border-b border-border/80 bg-surface-base/80 px-6 py-4 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
-              Heights
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--neutral-500)' }}>
-              AI Network Workspace Platform
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Heights</h1>
+            <p className="text-sm text-muted-foreground">AI Network Workspace Platform</p>
           </div>
-          <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--neutral-400)' }}>
-            <span>Logged in as <span style={{ color: 'var(--foreground)' }}>ops-admin@acme.com</span></span>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>
+              Logged in as <span className="text-foreground">ops-admin@acme.com</span>
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="relative z-10 flex-1 px-6 py-12">
-        <div className="mx-auto max-w-6xl">
-          {/* Hero section */}
+      <main className="relative z-10 flex min-h-[calc(100vh-81px)] items-center px-6 py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: shouldReduceMotion ? 0.01 : 0.4 }}
-            className="mb-10 text-center"
+            className="space-y-4 text-center"
           >
-            <div className="mb-3 flex items-center justify-center gap-2">
-              <Sparkles className="h-5 w-5" style={{ color: 'var(--primary)' }} />
-              <h2 className="text-3xl font-semibold tracking-tight lg:text-4xl" style={{ color: 'var(--foreground)' }}>
-                Where do you want to start?
-              </h2>
-            </div>
-            <p className="max-w-2xl mx-auto text-base" style={{ color: 'var(--neutral-400)' }}>
-              Each workspace opens with AI-generated priorities instead of a static dashboard, then lets you drill deeper with natural language.
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: shouldReduceMotion ? 0.01 : 0.35 }}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-primary"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>AI-Native Platform</span>
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: shouldReduceMotion ? 0 : 0.08, duration: shouldReduceMotion ? 0.01 : 0.38 }}
+              className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+            >
+              Where do you want to <span className="text-primary">start?</span>
+            </motion.h2>
+            <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+              Select a workspace to begin your investigation. Each one opens with AI-generated priorities and lets you drill deeper with natural language.
             </p>
           </motion.div>
 
-          {/* Workspace cards */}
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {(Object.values(WORKSPACES) as const).map((workspace, index) => {
-              const { icon: Icon, route } = WORKSPACE_CONFIG[workspace.id];
-              const investigations = SUGGESTED_INVESTIGATIONS[workspace.id];
+              const { icon: Icon, route, iconShellClassName } = WORKSPACE_CONFIG[workspace.id];
+              const investigations = SUGGESTED_INVESTIGATIONS[workspace.id].slice(0, 2);
+              const primaryObjects = workspace.primaryObjects;
 
               return (
                 <motion.div
                   key={workspace.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, scale: 0.94, y: 18 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{
-                    duration: shouldReduceMotion ? 0.01 : 0.3,
-                    delay: shouldReduceMotion ? 0 : index * 0.1,
+                    duration: shouldReduceMotion ? 0.01 : 0.35,
+                    delay: shouldReduceMotion ? 0 : 0.18 + index * 0.08,
                   }}
-                  whileHover={{ scale: shouldReduceMotion ? 1 : 1.02 }}
-                  whileTap={{ scale: shouldReduceMotion ? 1 : 0.98 }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.02, y: -6 }}
+                  className="group relative"
                 >
                   <div
-                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-lg"
-                    style={{
-                      background: 'var(--card)',
-                      borderColor: 'var(--border)',
-                    }}
+                    className="absolute inset-0 rounded-3xl opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-20"
+                    style={{ backgroundColor: workspace.accentColor }}
                   >
-                    {/* Card gradient overlay */}
-                    <div
-                      className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                      style={{
-                        background: `radial-gradient(circle at top, ${workspace.accentColor}18, transparent 60%)`,
-                      }}
-                    />
-
-                    {/* Border highlight on hover */}
-                    <div
-                      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                      style={{
-                        boxShadow: `inset 0 0 0 2px ${workspace.accentColor}40`,
-                      }}
-                    />
-
-                    {/* Card content */}
-                    <div className="relative flex h-full flex-col p-6">
-                      {/* Icon + Title + Tagline */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex h-10 w-10 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-110"
-                            style={{
-                              background: workspace.accentColor + '20',
-                              borderColor: workspace.accentColor + '40',
-                              color: 'var(--primary)',
-                            }}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold transition-colors duration-300 group-hover:text-[color:var(--primary)]" style={{ color: 'var(--foreground)' }}>
-                              {workspace.name}
-                            </h3>
-                            <p className="text-xs font-medium" style={{ color: workspace.accentColor }}>
-                              {workspace.tagline}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* What you work with */}
-                      <div className="mb-4">
-                        <div className="mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--neutral-500)' }}>
-                          What you work with
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {workspace.primaryObjects.map((obj) => (
-                            <span
-                              key={obj}
-                              className="rounded-md px-2 py-0.5 text-xs font-medium"
-                              style={{
-                                background: 'var(--surface-raised)',
-                                color: 'var(--foreground)',
-                              }}
-                            >
-                              {obj}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Suggested Questions */}
-                      <div className="mb-5 flex-1">
-                        <div className="mb-2 text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--neutral-500)' }}>
-                          Suggested questions
-                        </div>
-                        <ul className="space-y-2">
-                          {investigations.map((question, idx) => (
-                            <li
-                              key={idx}
-                              className="flex items-start gap-2 text-xs leading-relaxed rounded-lg px-2.5 py-2 transition-colors duration-200"
-                              style={{
-                                color: 'var(--neutral-400)',
-                                background: 'var(--surface-base)',
-                              }}
-                            >
-                              <ChevronRight className="h-3 w-3 shrink-0 mt-0.5" style={{ color: workspace.accentColor }} />
-                              <span>{question}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Enter button */}
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Link
-                          to={route}
-                          className="group/btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md"
-                          style={{
-                            background: 'var(--surface-raised)',
-                            borderColor: 'var(--border)',
-                            color: 'var(--foreground)',
-                          }}
-                        >
-                          Start {workspace.name}
-                          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
-                        </Link>
-                      </motion.div>
-                    </div>
                   </div>
+
+                  <article className="relative flex h-full flex-col gap-6 rounded-3xl border border-border bg-surface-base/80 p-8 backdrop-blur-sm transition-colors duration-300 group-hover:border-primary/50">
+                    <div className="flex items-center justify-between gap-3">
+                      <div
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center ${iconShellClassName}`}
+                        style={{ backgroundColor: workspace.accentColor }}
+                      >
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {primaryObjects.map((obj) => (
+                          <span
+                            key={obj}
+                            className="rounded-md bg-surface-raised px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+                          >
+                            {obj}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold tracking-tight text-foreground">
+                        {workspace.name}
+                      </h3>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {workspace.tagline}
+                      </p>
+                    </div>
+
+                    <div className="flex-1 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                        Suggested Investigations
+                      </p>
+                      <div className="space-y-2">
+                        {investigations.map((question) => (
+                          <div
+                            key={question}
+                            className="rounded-lg border border-border/60 bg-surface-raised/50 p-3 text-xs leading-relaxed text-muted-foreground transition-colors duration-300 group-hover:border-primary/20"
+                          >
+                            <div className="flex items-start gap-2">
+                              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0" style={{ color: workspace.accentColor }} />
+                              <span>{question}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Link
+                      to={route}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-raised py-3 text-sm font-bold text-foreground transition-all duration-200 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                    >
+                      Start {workspace.name}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </article>
                 </motion.div>
               );
             })}
           </div>
 
-          {/* Footer hint */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-10 text-center"
+            transition={{ duration: shouldReduceMotion ? 0.01 : 0.45, delay: shouldReduceMotion ? 0 : 0.45 }}
+            className="text-center text-sm text-muted-foreground"
           >
-            <p className="text-sm" style={{ color: 'var(--neutral-500)' }}>
-              Switch workspaces anytime using the selector in the top navigation bar.
-            </p>
+            Switch workspaces anytime using the selector in the top navigation bar.
           </motion.div>
         </div>
       </main>

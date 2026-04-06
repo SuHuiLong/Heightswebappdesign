@@ -1171,7 +1171,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Review bandwidth overview',
           description: 'Look at aggregate traffic history and usage.',
           prompt: 'Show the fleet bandwidth overview',
-          response: `Here is the bandwidth overview for ${scopeLabel}.`,
+          response: `I pulled the aggregate bandwidth view for ${scopeLabel}, including recent peaks, saturation windows, and the heaviest traffic segments.`,
           resultTypes: ['bandwidth-chart'],
         },
         {
@@ -1179,7 +1179,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Run fleet health analysis',
           description: 'Summarize current health, alerts, and recommended actions.',
           prompt: 'Run a fleet health analysis',
-          response: `I analyzed the current health signals for ${scopeLabel}.`,
+          response: `I summarized the current health signals for ${scopeLabel}, including active risks, notable alerts, and the next actions worth taking.`,
           resultTypes: ['metric', 'alerts', 'subscriber', 'action'],
         },
       ];
@@ -1206,7 +1206,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'View regional outages',
           description: 'Inspect incidents affecting this region.',
           prompt: `Show active outages in ${scopeLabel}`,
-          response: `These are the active outages affecting ${scopeLabel}.`,
+          response: `I mapped the active outages affecting ${scopeLabel}, with the current impact footprint and the providers involved.`,
           resultTypes: ['outage-map'],
         },
         {
@@ -1214,7 +1214,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Analyze regional bandwidth',
           description: 'Review usage trends for the selected region.',
           prompt: `Analyze bandwidth usage in ${scopeLabel}`,
-          response: `Here is the recent bandwidth trend for ${scopeLabel}.`,
+          response: `I charted the recent bandwidth trend for ${scopeLabel}, highlighting peak demand periods and where usage is rising fastest.`,
           resultTypes: ['bandwidth-chart'],
         },
         {
@@ -1222,7 +1222,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Recommend channel optimization',
           description: 'Generate optimization actions for this region.',
           prompt: `Recommend channel optimization for ${scopeLabel}`,
-          response: `I generated optimization guidance for ${scopeLabel}.`,
+          response: `I generated channel optimization guidance for ${scopeLabel}, including the highest-priority fixes and where they should be applied first.`,
           resultTypes: ['metric', 'alerts', 'action'],
         },
       ];
@@ -1249,7 +1249,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Check SLA compliance',
           description: 'Inspect current SLA performance for this organization.',
           prompt: `Check SLA compliance for ${scopeLabel}`,
-          response: `Here is the SLA compliance status for ${scopeLabel}.`,
+          response: `I checked the current SLA posture for ${scopeLabel}, including compliance status, breach pressure, and where performance is slipping.`,
           resultTypes: ['sla-status'],
         },
         {
@@ -1257,7 +1257,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Open work orders',
           description: 'Review recent work orders and escalations.',
           prompt: `Show open work orders for ${scopeLabel}`,
-          response: `Here are the latest work orders for ${scopeLabel}.`,
+          response: `I pulled the open work orders for ${scopeLabel}, including the latest escalations and what is still waiting on action.`,
           resultTypes: ['work-order'],
         },
         {
@@ -1265,7 +1265,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Review service plans',
           description: 'Check current plan mix and subscriber plan details.',
           prompt: `Review service plans for ${scopeLabel}`,
-          response: `Here are the current service plan details for ${scopeLabel}.`,
+          response: `I summarized the current service plans for ${scopeLabel}, including the active plan mix and the subscribers attached to each tier.`,
           resultTypes: ['service-plan'],
         },
       ];
@@ -1276,7 +1276,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'List gateway devices',
           description: 'Review all gateway devices under this subscriber.',
           prompt: `Show gateway devices for ${scopeLabel}`,
-          response: `Here are the gateway sites currently assigned to ${scopeLabel}.`,
+          response: `I listed the gateway devices currently assigned to ${scopeLabel}, so you can inspect the relevant sites before drilling deeper.`,
           resultTypes: ['device-table', 'subscriber'],
           resultMode: 'search-results',
         },
@@ -1285,7 +1285,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Review subscriber health',
           description: 'Summarize gateway health and subscriber-level alerts.',
           prompt: `Review gateway health for ${scopeLabel}`,
-          response: `Here is the current gateway health summary for ${scopeLabel}.`,
+          response: `I summarized the current gateway health for ${scopeLabel}, including alert pressure, stability signals, and the main issues to watch.`,
           resultTypes: ['metric', 'alerts', 'subscriber'],
         },
         {
@@ -1293,7 +1293,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'View subscriber topology',
           description: 'Inspect all gateway locations and connected client segments.',
           prompt: `Show topology for ${scopeLabel}`,
-          response: `Here is the network topology for ${scopeLabel}.`,
+          response: `I mapped the current network topology for ${scopeLabel}, including the gateway layout and the connected client segments.`,
           resultTypes: ['topology'],
         },
         {
@@ -1301,7 +1301,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Review service plan',
           description: 'Check plan context before drilling into a gateway device.',
           prompt: `Show the current service plan for ${scopeLabel}`,
-          response: `Here is the current service plan for ${scopeLabel}.`,
+          response: `I pulled the current service plan for ${scopeLabel}, including tier, usage context, and the most relevant billing details.`,
           resultTypes: ['service-plan'],
         },
       ];
@@ -1312,7 +1312,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'View gateway topology',
           description: 'Inspect this gateway and its connected client devices.',
           prompt: `Show topology for ${scopeLabel}`,
-          response: `Here is the network topology for ${scopeLabel}.`,
+          response: `I mapped the topology for ${scopeLabel}, so you can see this gateway, its attached clients, and the path through the local network.`,
           resultTypes: ['topology'],
           resultMode: 'search-results',
         },
@@ -1321,7 +1321,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Run speed test',
           description: 'Measure current download, upload, and latency for this gateway.',
           prompt: `Run a speed test for ${scopeLabel}`,
-          response: `Running a speed test for ${scopeLabel}.`,
+          response: `I started a speed test for ${scopeLabel} and I’m returning the current download, upload, and latency measurements.`,
           resultTypes: ['speed-test'],
         },
         {
@@ -1329,7 +1329,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Review current plan',
           description: 'Check service tier, usage, and billing context for this gateway.',
           prompt: `Show the current service plan for ${scopeLabel}`,
-          response: `Here is the current service plan for ${scopeLabel}.`,
+          response: `I pulled the current plan attached to ${scopeLabel}, including the service tier, usage profile, and billing context for this gateway.`,
           resultTypes: ['service-plan'],
         },
         {
@@ -1337,7 +1337,7 @@ function getScopeActions(scope: ScopeSelection): ScopeQuickAction[] {
           title: 'Quick inspect gateway',
           description: 'Open the detailed diagnostic drawer for this gateway context.',
           prompt: `Open a quick inspection for ${scopeLabel}`,
-          response: `Opening the quick inspection view for ${scopeLabel}.`,
+          response: `I opened the quick inspection view for ${scopeLabel}, so you can review the latest diagnostics, alerts, and device state in one place.`,
           openInspectDrawer: true,
         },
       ];

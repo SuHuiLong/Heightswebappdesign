@@ -1,4 +1,9 @@
-import { ALL_SCENARIOS, SCENARIO_REGISTRY, ScenarioDefinition } from './scenario-definitions';
+import {
+  ALL_SCENARIOS,
+  materializeScenarioForQuery,
+  SCENARIO_REGISTRY,
+  ScenarioDefinition,
+} from './scenario-definitions';
 import type { WorkspaceId } from './workspace-definitions';
 
 const DISABLED_SCENARIO_IDS = new Set(['dpi-traffic-anomalies']);
@@ -35,6 +40,27 @@ function scoreScenarioMatch(query: string, scenario: ScenarioDefinition) {
     score += matchedKeywords.length * 4;
   }
 
+  if (scenario.variants?.length) {
+    const variantScore = scenario.variants.reduce((best, variant) => {
+      let nextScore = 0;
+      const matchedVariantKeywords = variant.keywords.filter((kw) =>
+        normalized.includes(kw.toLowerCase()),
+      );
+
+      for (const keyword of matchedVariantKeywords) {
+        nextScore += keyword.length;
+      }
+
+      if (matchedVariantKeywords.length >= 2) {
+        nextScore += matchedVariantKeywords.length * 4;
+      }
+
+      return Math.max(best, nextScore);
+    }, 0);
+
+    score = Math.max(score, variantScore);
+  }
+
   if (normalized.includes(scenario.title.toLowerCase())) {
     score += 20;
   }
@@ -63,7 +89,7 @@ function resolveScenarioFromCandidates(
   }
 
   if (bestScore < 6) return null;
-  return bestMatch;
+  return bestMatch ? materializeScenarioForQuery(bestMatch, query) : null;
 }
 
 /**
@@ -86,7 +112,7 @@ export function resolveScenarioForWorkspace(
   if (preferredScenarioId) {
     const preferred = SCENARIO_REGISTRY[preferredScenarioId];
     if (preferred && !DISABLED_SCENARIO_IDS.has(preferred.id)) {
-      return preferred;
+      return materializeScenarioForQuery(preferred, query);
     }
   }
 

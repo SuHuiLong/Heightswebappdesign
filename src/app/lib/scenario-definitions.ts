@@ -153,6 +153,8 @@ export interface ScenarioDefinition {
   keywords: string[];
   /** Rendered content blocks */
   blocks: ScenarioBlock[];
+  /** Optional query-specific answer variants for fixed prompts and follow-ups */
+  variants?: ScenarioVariant[];
   /** Optional metadata for the prompt-first workbench */
   workbench?: {
     currentQuestion: Omit<WorkbenchCurrentQuestion, 'title' | 'scopeLabel'>;
@@ -162,6 +164,86 @@ export interface ScenarioDefinition {
       backendActions: BackendAction[];
       auditEntries: AuditEntry[];
     };
+  };
+}
+
+export interface ScenarioVariant {
+  id: string;
+  /** Query hints used to select this variant when a fixed prompt is submitted */
+  keywords: string[];
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  loadingStages?: string[];
+  confidence?: number;
+  evidenceDomains?: string[];
+  followUps?: string[];
+  blocks?: ScenarioBlock[];
+  workbench?: ScenarioDefinition['workbench'];
+}
+
+function scoreKeywordMatch(normalizedQuery: string, keywords: string[]) {
+  let score = 0;
+  const matchedKeywords: string[] = [];
+
+  for (const keyword of keywords) {
+    const normalizedKeyword = keyword.toLowerCase();
+    if (normalizedQuery.includes(normalizedKeyword)) {
+      score += normalizedKeyword.length;
+      matchedKeywords.push(normalizedKeyword);
+    }
+  }
+
+  if (matchedKeywords.length >= 2) {
+    score += matchedKeywords.length * 4;
+  }
+
+  return score;
+}
+
+function selectScenarioVariant(
+  scenario: ScenarioDefinition,
+  query: string,
+): ScenarioVariant | null {
+  if (!scenario.variants?.length || !query.trim()) {
+    return null;
+  }
+
+  const normalizedQuery = query.toLowerCase().trim();
+  let bestVariant: ScenarioVariant | null = null;
+  let bestScore = 0;
+
+  for (const variant of scenario.variants) {
+    const score = scoreKeywordMatch(normalizedQuery, variant.keywords);
+    if (score > bestScore) {
+      bestScore = score;
+      bestVariant = variant;
+    }
+  }
+
+  return bestScore >= 6 ? bestVariant : null;
+}
+
+export function materializeScenarioForQuery(
+  scenario: ScenarioDefinition,
+  query: string,
+): ScenarioDefinition {
+  const variant = selectScenarioVariant(scenario, query);
+  if (!variant) {
+    return scenario;
+  }
+
+  return {
+    ...scenario,
+    title: variant.title ?? scenario.title,
+    subtitle: variant.subtitle ?? scenario.subtitle,
+    description: variant.description ?? scenario.description,
+    loadingStages: variant.loadingStages ?? scenario.loadingStages,
+    confidence: variant.confidence ?? scenario.confidence,
+    evidenceDomains: variant.evidenceDomains ?? scenario.evidenceDomains,
+    followUps: variant.followUps ?? scenario.followUps,
+    blocks: variant.blocks ?? scenario.blocks,
+    workbench: variant.workbench ?? scenario.workbench,
   };
 }
 
@@ -182,9 +264,9 @@ const firmwareRegression: ScenarioDefinition = {
   confidence: 94,
   evidenceDomains: ['Connection Logs', 'Firmware Inventory', 'MAC Vendor Registry', 'Ticket History'],
   followUps: [
-    'Show me the detailed timeline of connection drops',
-    'Which regions are most affected?',
-    'Generate a bug report for the firmware team',
+    'Rank the cohorts most likely to require rollback next.',
+    'Compare the leading rollback cohort against the last stable baseline.',
+    'Draft the staged rollback plan for the highest-risk cohort.',
   ],
   family: 'fleet',
   keywords: [
@@ -237,6 +319,345 @@ const firmwareRegression: ScenarioDefinition = {
         { label: 'Rollback Firmware v2.1', description: 'Revert 4,218 gateways to v2.0.3 in a staged rollout.', variant: 'primary' },
         { label: 'Generate IOP Bug Report', description: 'Create a detailed bug report for the firmware engineering team.', variant: 'outline' },
         { label: 'Notify Affected Subscribers', description: 'Send a proactive maintenance notification to impacted users.', variant: 'outline' },
+      ],
+    },
+  ],
+  variants: [
+    {
+      id: 'rollback-candidate-ranking',
+      keywords: [
+        'highest-risk cohorts',
+        'priority cohorts',
+        'operator attention',
+        'rollout risk',
+        'rollback candidate',
+        'most urgent cohort',
+        'moving first',
+        'require rollback next',
+      ],
+      title: 'Rollback Candidate Ranking',
+      subtitle: 'Cohort Risk Prioritization',
+      description:
+        'Ranked the firmware v2.1 cohorts by rollback urgency using disconnect acceleration, ticket growth, and subscriber criticality.',
+      loadingStages: [
+        'Scoring firmware cohorts by disconnect acceleration...',
+        'Comparing ticket growth against the last stable baseline...',
+        'Ranking rollback urgency across impacted cohorts...',
+        'Preparing operator intervention priorities...',
+      ],
+      confidence: 93,
+      evidenceDomains: [
+        'Connection Logs',
+        'Ticket Growth',
+        'Firmware Cohorts',
+        'Subscriber Criticality',
+      ],
+      followUps: [
+        'Compare the leading rollback cohort against the last stable baseline.',
+        'Draft the staged rollback plan for the highest-risk cohort.',
+        'Show the firmware rollback evidence that still needs human review.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Rollback Priorities Ranked',
+          body: 'Three firmware v2.1 cohorts now account for 71% of the new disconnect volume. The Acme North suburban gateway cohort is the leading rollback candidate because its drop rate is accelerating fastest, tickets doubled in the last 12 hours, and the affected homes have the highest premium-plan concentration.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Top Rollback Candidate', value: 'Acme North Suburban', change: 'Risk score 94/100', trend: 'up' },
+            { label: 'Cohorts Escalating', value: '3', change: 'Need action in 24h', trend: 'up' },
+            { label: 'Ticket Growth', value: '+118%', change: 'Since yesterday', trend: 'up' },
+            { label: 'Intervention Window', value: '<24 hrs', change: 'Before churn risk rises', trend: 'down' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Rollback Priority by Cohort',
+          columns: ['Cohort', 'Gateways', 'Drop Acceleration', 'Ticket Growth', 'Recommendation'],
+          rows: [
+            ['Acme North Suburban', '612', '+58%', '+118%', 'Rollback first'],
+            ['FastFiber South Metro', '428', '+37%', '+71%', 'Mitigate + monitor'],
+            ['NetPro Mixed Hardware', '207', '+19%', '+24%', 'Watch closely'],
+            ['Legacy Qualcomm Fleet', '156', '+9%', '+11%', 'No rollback yet'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Stage Rollback Wave 1', description: 'Start rollback on the top-ranked cohort before the evening peak.', variant: 'primary' },
+            { label: 'Compare Stable Baseline', description: 'Open the delta view against the last healthy rollout cohort.', variant: 'outline' },
+            { label: 'Notify Regional Operators', description: 'Share the ranked intervention list with affected operators.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'stable-baseline-comparison',
+      keywords: [
+        'stable baseline',
+        'last stable baseline',
+        'compare the failing cohort',
+        'explain the delta',
+        'compare the leading rollback cohort',
+      ],
+      title: 'Cohort Baseline Comparison',
+      subtitle: 'Failing vs Stable Rollout Delta',
+      description:
+        'Compared the leading failing firmware cohort against the last stable rollout baseline to isolate what changed materially.',
+      loadingStages: [
+        'Loading the last stable firmware baseline...',
+        'Comparing disconnect frequency and retry behavior...',
+        'Measuring ticket and QoE deltas...',
+        'Summarizing the rollback justification...',
+      ],
+      confidence: 95,
+      evidenceDomains: [
+        'Stable Baseline',
+        'Disconnect Telemetry',
+        'QoE Metrics',
+        'Ticket History',
+      ],
+      followUps: [
+        'Rank the cohorts most likely to require rollback next.',
+        'Draft the staged rollback plan for the highest-risk cohort.',
+        'Show the firmware rollback evidence that still needs human review.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Failing Cohort Diverges Materially',
+          body: 'The leading v2.1 cohort is now 3.0x worse than the last stable v2.0.3 baseline on disconnect frequency and 2.2x worse on support contacts. The gap is largest during the evening peak, which strongly supports staged rollback instead of continued observation.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Drop Rate Delta', value: '+8.3 pts', change: '12.4% vs 4.1%', trend: 'up' },
+            { label: 'Avg Retries / Day', value: '8.3', change: '3.1 above baseline', trend: 'up' },
+            { label: 'Ticket Lift', value: '2.2x', change: 'Above stable cohort', trend: 'up' },
+            { label: 'Peak-Hour Impact', value: '19:00-23:00', change: 'Worst divergence', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Failing Cohort vs Stable Baseline',
+          columns: ['Signal', 'v2.1 Failing', 'v2.0.3 Stable', 'Delta'],
+          rows: [
+            ['Disconnect rate', '12.4%', '4.1%', '+8.3 pts'],
+            ['Retries per gateway / day', '8.3', '5.2', '+3.1'],
+            ['Support contacts / 100 homes', '14.8', '6.7', '+8.1'],
+            ['Evening latency spike', '94 ms', '41 ms', '+53 ms'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Approve Rollback Justification', description: 'Use the baseline delta as the operator-facing rollback rationale.', variant: 'primary' },
+            { label: 'Open Ranked Cohorts', description: 'Return to the cohort ranking view to decide who rolls back first.', variant: 'outline' },
+            { label: 'Share Delta Snapshot', description: 'Send the stable-vs-failing comparison to firmware engineering.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'rollback-plan',
+      keywords: [
+        'draft a rollback plan',
+        'staged rollback plan',
+        'action is delayed',
+        'operator risk if action is delayed',
+      ],
+      title: 'Staged Rollback Plan',
+      subtitle: 'Operator Action Plan',
+      description:
+        'Prepared a staged firmware rollback plan that minimizes peak-hour exposure while preserving service continuity.',
+      loadingStages: [
+        'Sequencing the rollback waves by cohort risk...',
+        'Checking maintenance windows and change capacity...',
+        'Planning subscriber communication and monitoring...',
+        'Packaging the rollback runbook for operators...',
+      ],
+      confidence: 91,
+      evidenceDomains: [
+        'Rollback Policy',
+        'Maintenance Windows',
+        'Firmware Inventory',
+        'Subscriber Communications',
+      ],
+      followUps: [
+        'Rank the cohorts most likely to require rollback next.',
+        'Compare the leading rollback cohort against the last stable baseline.',
+        'Show the firmware rollback evidence that still needs human review.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Rollback Plan Ready',
+          body: 'The safest plan is a three-wave rollback starting with the Acme North suburban cohort before the evening peak. Delaying past the next 24 hours is likely to add roughly 190 more impacted homes and push the support backlog above the weekend threshold.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Wave 1 Scope', value: '612 gateways', change: 'Top-risk cohort', trend: 'neutral' },
+            { label: 'Execution Window', value: '16:00-18:00', change: 'Before peak', trend: 'neutral' },
+            { label: 'Delay Risk', value: '+190 homes', change: 'If postponed 24h', trend: 'up' },
+            { label: 'Rollback Duration', value: '2.5 hrs', change: 'Across 3 waves', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Rollback Runbook',
+          columns: ['Wave', 'Target', 'Window', 'Guardrail', 'Success Check'],
+          rows: [
+            ['Wave 1', 'Acme North Suburban', '16:00-16:45', 'Pause if drops stay >10%', 'Disconnect rate <6%'],
+            ['Wave 2', 'FastFiber South Metro', '17:00-17:40', 'Hold if ACS retries spike', 'Ticket creation stabilizes'],
+            ['Wave 3', 'NetPro Mixed Hardware', '18:15-18:45', 'Skip if latency normalizes', 'Evening peak passes cleanly'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Approve Wave 1 Rollback', description: 'Begin the first rollback wave for the top-risk cohort.', variant: 'primary' },
+            { label: 'Send Subscriber Notice', description: 'Issue the maintenance notice for the impacted homes.', variant: 'outline' },
+            { label: 'Open Human Review Evidence', description: 'Check the remaining evidence gates before execution.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'firmware-human-review',
+      keywords: [
+        'human review',
+        'rollback evidence',
+        'rollback case',
+        'root-cause evidence',
+        'what still needs human review',
+      ],
+      title: 'Firmware Rollback Evidence',
+      subtitle: 'Support Case Review',
+      description:
+        'Collected the root-cause evidence and highlighted the specific rollback gates that still require human approval.',
+      loadingStages: [
+        'Loading gateway diagnostics and ACS change history...',
+        'Reviewing rollback safety checks for the affected case...',
+        'Flagging unresolved evidence that needs human judgment...',
+        'Preparing the support review package...',
+      ],
+      confidence: 92,
+      evidenceDomains: [
+        'Gateway Diagnostics',
+        'ACS Config History',
+        'Rollback Safety Checks',
+        'Subscriber Impact',
+      ],
+      followUps: [
+        'Show pending validation work and explain why the case is not fully closed yet.',
+        'Show AI fixes waiting for validation and what still needs to be confirmed.',
+        'Draft the staged rollback plan for the highest-risk cohort.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Human Review Still Required',
+          body: 'AI isolated the regression to the firmware v2.1 rollout plus an ACS retry policy change, but support still needs to verify rollback safety on the affected gateway cluster. The evidence is strong enough to justify action, yet two closure gates remain open: rollback blast radius and customer communication timing.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Root-Cause Confidence', value: '92%', change: 'AI correlation complete', trend: 'up' },
+            { label: 'Open Review Gates', value: '2', change: 'Before closure', trend: 'neutral' },
+            { label: 'Affected Cases', value: '14', change: 'Need reviewer sign-off', trend: 'up' },
+            { label: 'Oldest Waiting Case', value: '47 min', change: 'Escalate soon', trend: 'up' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Human Review Checklist',
+          columns: ['Evidence', 'AI Conclusion', 'Why Review Is Needed', 'Owner'],
+          rows: [
+            ['Gateway drop trace', 'Matches v2.1 defect signature', 'Confirm no local cabling issue', 'Support L2'],
+            ['ACS retry policy change', 'Amplifies reconnect storm', 'Approve rollback sequence', 'Platform Ops'],
+            ['Subscriber impact estimate', '14 homes currently critical', 'Validate notice timing', 'Care Team'],
+            ['Rollback simulation', 'Safe for top cohort', 'Confirm maintenance window', 'Duty Manager'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Open Reviewer Packet', description: 'Send the rollback evidence bundle to Support L2 and Platform Ops.', variant: 'primary' },
+            { label: 'Show Validation Queue', description: 'Open the cases that are still waiting for closure checks.', variant: 'outline' },
+            { label: 'Approve Maintenance Notice', description: 'Review the subscriber notice before rollback begins.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'validation-queue',
+      keywords: [
+        'pending validation',
+        'waiting for validation',
+        'not fully closed yet',
+        'needs to be confirmed',
+        'cases needing my attention',
+        'support cases',
+      ],
+      title: 'AI Fix Validation Queue',
+      subtitle: 'Cases Awaiting Closure',
+      description:
+        'Summarized the AI-driven support cases that are still blocked on verification, rollback confirmation, or human sign-off.',
+      loadingStages: [
+        'Scanning AI-handled cases awaiting closure...',
+        'Checking verification jobs and rollback confirmations...',
+        'Ranking blocked cases by urgency...',
+        'Preparing the validation queue summary...',
+      ],
+      confidence: 90,
+      evidenceDomains: [
+        'Case Queue',
+        'Verification Jobs',
+        'Rollback Tasks',
+        'Support Workflow',
+      ],
+      followUps: [
+        'Show the firmware rollback evidence that still needs human review.',
+        'Show the cases AI fully resolved today and summarize what was fixed.',
+        'Show the protected sessions AI handled today and explain the QoS actions.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Validation Work Still Open',
+          body: 'Nine AI-handled support cases are waiting on final verification. Four need rollback confirmation, three need a post-fix stability window to complete, and two are blocked on human approval for customer communication before the case can be closed.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Cases Waiting', value: '9', change: 'Across 3 queues', trend: 'up' },
+            { label: 'Rollback Confirmations', value: '4', change: 'Most urgent', trend: 'up' },
+            { label: 'Stability Windows', value: '3', change: 'Auto-checks running', trend: 'neutral' },
+            { label: 'Human Sign-Offs', value: '2', change: 'Care + Ops', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Pending Validation Queue',
+          columns: ['Case', 'Blocker', 'ETA', 'Risk if Delayed', 'Next Step'],
+          rows: [
+            ['TKT-4821', 'Rollback confirmation', '18 min', 'Repeat disconnects', 'Verify v2.0.9 applied'],
+            ['TKT-4819', 'Custom payload push', '26 min', 'New install delayed', 'Approve config retry'],
+            ['TKT-4830', '24h stability window', '41 min', 'Premature closure', 'Wait for auto-check'],
+            ['TKT-4833', 'Subscriber notice approval', '55 min', 'Escalation confusion', 'Approve outreach copy'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Review Highest-Risk Cases', description: 'Open the top blocked cases that need attention now.', variant: 'primary' },
+            { label: 'Open Human Review Evidence', description: 'Inspect the rollback cases that still need reviewer approval.', variant: 'outline' },
+            { label: 'Refresh Verification Jobs', description: 'Rerun the post-fix checks for cases waiting on stability windows.', variant: 'outline' },
+          ],
+        },
       ],
     },
   ],
@@ -566,9 +987,9 @@ const churnPrevention: ScenarioDefinition = {
   confidence: 89,
   evidenceDomains: ['QoE Metrics', 'Support Tickets', 'Contract DB', 'Usage Patterns'],
   followUps: [
-    'Apply QoS optimization to the top 5 highest-risk subscribers',
-    'Show me the degradation trend for the past month',
-    'Generate proactive notification campaign',
+    'Show the subscribers most at risk of churn and explain the rescue priority.',
+    'Recommend the best churn save offer and explain the expected impact.',
+    'Show churn risk with no tickets and explain the early warning signals.',
   ],
   family: 'business',
   keywords: [
@@ -639,6 +1060,74 @@ const churnPrevention: ScenarioDefinition = {
       ],
     },
   ],
+  variants: [
+    {
+      id: 'save-offer',
+      keywords: [
+        'best churn save offer',
+        'save offer',
+        'expected impact',
+        'retention offer',
+      ],
+      title: 'Churn Save Offer Recommendation',
+      subtitle: 'Retention Action Plan',
+      description:
+        'Matched the highest-risk subscriber cohort with the save offers that are most likely to preserve revenue without over-discounting.',
+      loadingStages: [
+        'Reviewing churn drivers and contract timing...',
+        'Comparing save-offer performance by cohort...',
+        'Estimating retention lift and margin impact...',
+        'Packaging the recommended retention action...',
+      ],
+      confidence: 88,
+      evidenceDomains: [
+        'QoE Metrics',
+        'Offer Performance',
+        'Contract DB',
+        'Subscriber Value',
+      ],
+      followUps: [
+        'Show the subscribers most at risk of churn and explain the rescue priority.',
+        'Show churn risk with no tickets and explain the early warning signals.',
+        'Identify the best VAS-fit households using device fingerprints and subscription gaps.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Best Save Offer Identified',
+          body: 'The strongest save motion for the highest-risk households is a 90-day speed-tier upgrade plus white-glove outreach. It preserves roughly 74% of the at-risk MRR in the current cohort while keeping margin erosion materially lower than a blanket discount approach.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Recommended Offer', value: '90-day speed boost', change: 'Plus priority outreach', trend: 'neutral' },
+            { label: 'Expected Retention Lift', value: '+22%', change: 'Vs no action', trend: 'up' },
+            { label: 'Protected MRR', value: '$13,600', change: 'From current risk pool', trend: 'up' },
+            { label: 'Margin Trade-Off', value: '-6%', change: 'Better than cash discount', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Save Offer Comparison',
+          columns: ['Offer', 'Target Cohort', 'Retention Lift', 'Margin Impact', 'Recommendation'],
+          rows: [
+            ['90-day speed boost', 'Critical latency sufferers', '+22%', '-6%', 'Best overall'],
+            ['1-month bill credit', 'Price-sensitive homes', '+14%', '-11%', 'Use selectively'],
+            ['Device optimization visit', 'Gaming-heavy homes', '+17%', '-4%', 'Secondary option'],
+            ['Bundle add-on discount', 'Family households', '+9%', '-8%', 'Low priority'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Launch Save Offer', description: 'Send the recommended retention offer to the highest-risk households.', variant: 'primary' },
+            { label: 'Review High-Risk List', description: 'Open the current at-risk households and rescue priorities.', variant: 'outline' },
+            { label: 'Draft Outreach Copy', description: 'Generate the subscriber-facing message for the save campaign.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 // ─── Scenario 5: Hyper-Targeted Upsell ────────────────────────────────────
@@ -658,9 +1147,9 @@ const bandwidthUpsell: ScenarioDefinition = {
   confidence: 86,
   evidenceDomains: ['Bandwidth Telemetry', 'Application Usage', 'Plan Database', 'Billing System'],
   followUps: [
-    'Show me the top 20 users by saturation duration',
-    'What plans should we recommend?',
-    'Generate the targeted offer email template',
+    'Show this week’s top 10 upsell candidates and explain why AI ranked them highest.',
+    'Forecast the near-term revenue impact of the strongest current growth opportunities.',
+    'Recommend the next-best offer based on current conversion and churn signals.',
   ],
   family: 'business',
   keywords: [
@@ -719,6 +1208,405 @@ const bandwidthUpsell: ScenarioDefinition = {
       ],
     },
   ],
+  variants: [
+    {
+      id: 'opportunity-ranking',
+      keywords: [
+        'top 10 upsell candidates',
+        'most valuable opportunities',
+        'ranked them highest',
+        'scoring factors',
+      ],
+      title: 'Top Upsell Candidate Ranking',
+      subtitle: 'Opportunity Prioritization',
+      description:
+        'Ranked the highest-confidence upgrade opportunities using saturation duration, plan gap, and conversion propensity.',
+      loadingStages: [
+        'Ranking saturated subscribers by conversion propensity...',
+        'Scoring plan gap and session criticality...',
+        'Filtering the highest-value upgrade opportunities...',
+        'Preparing the upsell priority list...',
+      ],
+      confidence: 88,
+      evidenceDomains: [
+        'Bandwidth Telemetry',
+        'Propensity Model',
+        'Plan Gap',
+        'Revenue Scoring',
+      ],
+      followUps: [
+        'Forecast the near-term revenue impact of the strongest current growth opportunities.',
+        'Show the ROI tracker and explain where conversion is being won or lost.',
+        'Explain the upsell confidence score and the evidence behind it.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Best Upsell Targets Ranked',
+          body: 'The top 10 upgrade candidates combine sustained saturation, a large plan gap, and above-average conversion propensity. The highest-value cluster is work-from-home households that also stream 4K during the evening peak, making them both easy to justify and commercially attractive.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Top 10 Revenue Pool', value: '$4,320', change: 'Potential monthly uplift', trend: 'up' },
+            { label: 'Avg Conversion Confidence', value: '81%', change: 'Across top 10', trend: 'up' },
+            { label: 'Median Plan Gap', value: '150 Mbps', change: 'Current vs needed', trend: 'up' },
+            { label: 'Fastest-Moving Segment', value: 'WFH + 4K homes', change: 'Highest score density', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Top 10 Upsell Candidates',
+          columns: ['Subscriber', 'Current Plan', 'Plan Gap', 'Confidence', 'Recommended Offer'],
+          rows: [
+            ['SUB-7834', 'Entertainment 300', '200 Mbps', '89%', 'Entertainment 500'],
+            ['SUB-6678', 'Work-From-Home 300', '150 Mbps', '86%', 'Work-From-Home 500'],
+            ['SUB-9902', 'Business Core 500', '300 Mbps', '84%', 'Business Pro 1G'],
+            ['SUB-3351', 'Entertainment 300', '120 Mbps', '82%', 'Entertainment 500'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Launch Top 10 Offers', description: 'Trigger the ranked offer set for the best current upsell candidates.', variant: 'primary' },
+            { label: 'Open Revenue Forecast', description: 'Project the near-term revenue impact of the ranked opportunities.', variant: 'outline' },
+            { label: 'Review Confidence Evidence', description: 'Inspect the score drivers behind the current ranking.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'revenue-impact',
+      keywords: [
+        'revenue impact',
+        'near-term revenue',
+        'convert at current rates',
+        'where to focus next',
+      ],
+      title: 'Upsell Revenue Forecast',
+      subtitle: 'Near-Term Revenue Impact',
+      description:
+        'Projected the revenue uplift from the strongest current upgrade opportunities under current conversion rates.',
+      loadingStages: [
+        'Loading current offer conversion assumptions...',
+        'Forecasting revenue uplift by segment and campaign...',
+        'Comparing upside against delivery capacity...',
+        'Packaging the growth focus recommendation...',
+      ],
+      confidence: 85,
+      evidenceDomains: [
+        'Conversion Model',
+        'Offer Mix',
+        'Plan Gap',
+        'Revenue Attribution',
+      ],
+      followUps: [
+        'Show this week’s top 10 upsell candidates and explain why AI ranked them highest.',
+        'Show the ROI tracker and explain where conversion is being won or lost.',
+        'Recommend the next-best offer based on current conversion and churn signals.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Revenue Upside Concentrates in Two Motions',
+          body: 'At current conversion rates, the strongest bandwidth upsell opportunities can add roughly $14.8k in near-term monthly revenue. More than 60% of that upside sits in two motions: premium WFH upgrades and family-streaming households that are already saturating their current tiers.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Near-Term Uplift', value: '$14,800', change: 'Current conversion assumptions', trend: 'up' },
+            { label: 'Highest-Yield Motion', value: 'WFH upgrades', change: '$6,100 MRR', trend: 'up' },
+            { label: 'Focus Segment', value: 'Family streaming', change: '$3,100 MRR', trend: 'up' },
+            { label: 'Payback Window', value: '31 days', change: 'Campaign + incentive cost', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'forecast',
+          title: 'Projected Upsell Revenue',
+          historical: [
+            { month: 'Jan', value: 7100 },
+            { month: 'Feb', value: 8200 },
+            { month: 'Mar', value: 9300 },
+          ],
+          predicted: [
+            { month: 'Apr', value: 11800, upper: 12900, lower: 10700 },
+            { month: 'May', value: 13600, upper: 14900, lower: 12300 },
+            { month: 'Jun', value: 14800, upper: 16200, lower: 13400 },
+          ],
+          unit: '$',
+          growthAssumption: 18,
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Focus on Top Revenue Motions', description: 'Prioritize the highest-yield upgrade campaigns first.', variant: 'primary' },
+            { label: 'Open ROI Tracker', description: 'Inspect where conversion is winning or stalling in active campaigns.', variant: 'outline' },
+            { label: 'Recommend Next Offer', description: 'See the next-best offer for subscribers with mixed upsell/churn signals.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'campaign-roi',
+      keywords: [
+        'roi tracker',
+        'campaign roi',
+        'conversion is being won or lost',
+      ],
+      title: 'Campaign ROI Tracker',
+      subtitle: 'Conversion Performance Review',
+      description:
+        'Measured how the active upsell campaigns are converting, where margin is leaking, and which offers are outperforming.',
+      loadingStages: [
+        'Loading offer funnel performance...',
+        'Comparing segment conversion and CAC...',
+        'Measuring incremental revenue by campaign...',
+        'Building the ROI performance tracker...',
+      ],
+      confidence: 87,
+      evidenceDomains: [
+        'Campaign Metrics',
+        'Conversion Events',
+        'Revenue Attribution',
+        'Offer Funnel',
+      ],
+      followUps: [
+        'Forecast the near-term revenue impact of the strongest current growth opportunities.',
+        'Recommend the next-best offer based on current conversion and churn signals.',
+        'Explain the upsell confidence score and the evidence behind it.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'ROI Is Winning in Two Campaign Lanes',
+          body: 'The best ROI is coming from premium WFH upgrades and gaming-heavy households, where conversion remains above plan and incentive costs stay low. Margin is leaking in broad family-streaming blasts because discounts are too generous relative to the observed plan gap.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Best ROI Campaign', value: 'Premium Upgrade Q2', change: '3.8x return', trend: 'up' },
+            { label: 'Weakest ROI Campaign', value: 'Family Flex Save', change: '1.4x return', trend: 'down' },
+            { label: 'Conversion Winner', value: 'Gaming homes', change: '18.6%', trend: 'up' },
+            { label: 'Margin Leak', value: '$1,120', change: 'Discount-heavy lane', trend: 'down' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Campaign ROI Breakdown',
+          columns: ['Campaign', 'Conversion', 'Incremental MRR', 'CAC', 'ROI'],
+          rows: [
+            ['Premium Upgrade Q2', '16.8%', '$5,440', '$1,420', '3.8x'],
+            ['WFH Momentum', '14.2%', '$4,180', '$1,220', '3.4x'],
+            ['Gaming Power Offer', '18.6%', '$2,910', '$980', '3.0x'],
+            ['Family Flex Save', '9.4%', '$1,720', '$1,230', '1.4x'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Scale the Best ROI Campaigns', description: 'Shift more volume into the highest-return growth motions.', variant: 'primary' },
+            { label: 'Tune Discount Levels', description: 'Reduce discount pressure in the weakest ROI lane.', variant: 'outline' },
+            { label: 'Open Next-Best Offer', description: 'Inspect the offer recommendation for mixed-signal subscribers.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'next-best-offer',
+      keywords: [
+        'next-best offer',
+        'recommend the next-best offer',
+        'current conversion and churn signals',
+      ],
+      title: 'Next-Best Offer Recommendation',
+      subtitle: 'Offer Strategy',
+      description:
+        'Recommended the offer that balances upsell potential against churn sensitivity for the current subscriber or campaign context.',
+      loadingStages: [
+        'Combining upsell propensity with churn sensitivity...',
+        'Comparing eligible offers and expected lift...',
+        'Estimating margin and save-risk trade-offs...',
+        'Finalizing the next-best offer recommendation...',
+      ],
+      confidence: 84,
+      evidenceDomains: [
+        'Conversion Signals',
+        'Churn Signals',
+        'Offer Library',
+        'Plan Eligibility',
+      ],
+      followUps: [
+        'Show the ROI tracker and explain where conversion is being won or lost.',
+        'Explain the upsell confidence score and the evidence behind it.',
+        'Compare this subscriber with similar households and explain where it differs.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Best Offer Is a Guided Mid-Tier Upgrade',
+          body: 'The next-best offer is a mid-tier upgrade with a short introductory discount rather than a straight jump to the highest plan. It captures most of the conversion upside while keeping churn exposure low for households that still show some price sensitivity.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Recommended Offer', value: 'Entertainment 500 + 60-day intro', change: 'Best fit', trend: 'neutral' },
+            { label: 'Expected Conversion', value: '17%', change: 'Higher than 1G offer', trend: 'up' },
+            { label: 'Churn Guardrail', value: 'Low', change: 'Price sensitivity respected', trend: 'neutral' },
+            { label: 'Incremental MRR', value: '$46 / home', change: 'Post-intro period', trend: 'up' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Offer Comparison',
+          columns: ['Offer', 'Conversion', 'Churn Risk', 'Incremental MRR', 'Decision'],
+          rows: [
+            ['Entertainment 500 + intro', '17%', 'Low', '$46', 'Recommended'],
+            ['Entertainment 1G', '9%', 'Medium', '$71', 'Too aggressive'],
+            ['Device add-on bundle', '12%', 'Low', '$18', 'Secondary option'],
+            ['Cash discount only', '14%', 'Medium', '$7', 'Low value'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Use Recommended Offer', description: 'Launch the guided mid-tier offer for the current target context.', variant: 'primary' },
+            { label: 'Inspect ROI Context', description: 'Review how this recommendation fits the active campaign ROI.', variant: 'outline' },
+            { label: 'Open Peer Comparison', description: 'Compare the target household against similar subscribers.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'subscriber-confidence',
+      keywords: [
+        'upsell confidence score',
+        'evidence behind it',
+        'likely to convert',
+      ],
+      title: 'Upsell Confidence Evidence',
+      subtitle: 'Subscriber Conversion Likelihood',
+      description:
+        'Explained the evidence behind the current upsell confidence score for the selected subscriber or household.',
+      loadingStages: [
+        'Reviewing usage intensity and plan gap...',
+        'Checking peer conversion outcomes...',
+        'Scoring offer fit and price sensitivity...',
+        'Preparing the confidence evidence summary...',
+      ],
+      confidence: 83,
+      evidenceDomains: [
+        'Usage Pattern',
+        'Plan Gap',
+        'Peer Conversion',
+        'Offer Response History',
+      ],
+      followUps: [
+        'Compare this subscriber with similar households and explain where it differs.',
+        'Recommend the next-best offer based on current conversion and churn signals.',
+        'Forecast the near-term revenue impact of the strongest current growth opportunities.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Confidence Is Strong but Not Perfect',
+          body: 'The current upsell confidence is high because the household shows repeated evening saturation, a measurable plan gap, and peer groups that convert well when offered the next tier. The main drag is moderate price sensitivity after the last promotional period ended.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Upsell Confidence', value: '78%', change: 'High confidence', trend: 'up' },
+            { label: 'Plan Gap', value: '140 Mbps', change: 'Needed at peak', trend: 'up' },
+            { label: 'Peer Conversion', value: '16.4%', change: 'Similar homes', trend: 'up' },
+            { label: 'Price Sensitivity', value: 'Moderate', change: 'Watch discount depth', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Confidence Score Drivers',
+          columns: ['Signal', 'Observation', 'Impact on Score', 'Notes'],
+          rows: [
+            ['Evening saturation', '>2.8 hrs/day', '+24', 'Consistent pain point'],
+            ['Video-call activity', '4 weekdays/week', '+18', 'Work-from-home fit'],
+            ['Peer conversions', '16.4%', '+21', 'Strong comparable cohort'],
+            ['Promo fatigue', 'Last discount ended 45d ago', '-9', 'Keep offer measured'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Open Peer Comparison', description: 'See how the household differs from similar subscribers.', variant: 'primary' },
+            { label: 'Recommend Next Offer', description: 'Choose the next-best offer based on the current evidence.', variant: 'outline' },
+            { label: 'Review Revenue Forecast', description: 'Connect the subscriber signal to broader revenue planning.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'peer-comparison',
+      keywords: [
+        'compare',
+        'similar subscribers',
+        'where it differs',
+      ],
+      title: 'Peer Comparison for Upsell Fit',
+      subtitle: 'Similar Subscriber Benchmark',
+      description:
+        'Compared the selected subscriber against similar households to show why the current upsell recommendation differs.',
+      loadingStages: [
+        'Finding similar households in the active campaign...',
+        'Comparing usage patterns and conversion history...',
+        'Measuring plan gap and sensitivity differences...',
+        'Packaging the peer benchmark summary...',
+      ],
+      confidence: 82,
+      evidenceDomains: [
+        'Peer Cohort',
+        'Usage Distribution',
+        'Plan Mix',
+        'Conversion Outcomes',
+      ],
+      followUps: [
+        'Explain the upsell confidence score and the evidence behind it.',
+        'Recommend the next-best offer based on current conversion and churn signals.',
+        'Show the ROI tracker and explain where conversion is being won or lost.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'This Household Is Slightly More Ready Than Its Peers',
+          body: 'Compared with similar households in the same campaign, the selected subscriber has a larger evening plan gap and heavier video-call load, which makes the upgrade case stronger. The main difference is that price sensitivity is only moderate here, while several peers needed a larger introductory discount to convert.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Plan Gap vs Peers', value: '+28 Mbps', change: 'Above median', trend: 'up' },
+            { label: 'Video Sessions / Week', value: '19', change: '+4 vs peers', trend: 'up' },
+            { label: 'Price Sensitivity', value: 'Lower', change: 'Than peer median', trend: 'up' },
+            { label: 'Expected Lift', value: '+3.2 pts', change: 'Vs campaign average', trend: 'up' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Subscriber vs Similar Households',
+          columns: ['Signal', 'Selected Subscriber', 'Peer Median', 'Difference'],
+          rows: [
+            ['Plan gap', '140 Mbps', '112 Mbps', '+28 Mbps'],
+            ['Evening saturation', '2.8 hrs/day', '2.3 hrs/day', '+0.5 hrs'],
+            ['Video sessions / week', '19', '15', '+4'],
+            ['Intro discount needed', 'Moderate', 'High', 'More favorable'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Use Peer-Tuned Offer', description: 'Apply the offer recommended for this subscriber’s peer profile.', variant: 'primary' },
+            { label: 'Review Confidence Drivers', description: 'Open the score explanation behind the current recommendation.', variant: 'outline' },
+            { label: 'Open Campaign ROI', description: 'See how peer performance rolls up into campaign ROI.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 // ─── Scenario 6: Promoting VAS via Device Fingerprinting ──────────────────
@@ -738,9 +1626,9 @@ const vasDeviceFingerprint: ScenarioDefinition = {
   confidence: 92,
   evidenceDomains: ['Device Inventory', 'MAC OUI Database', 'VAS Subscriptions', 'Household Profiles'],
   followUps: [
-    'Show me the device breakdown by household size',
-    'Which VAS packages have the highest conversion rate?',
-    'Trigger the free-trial campaign for the top 50 households',
+    'Identify the best VAS-fit households using device fingerprints and subscription gaps.',
+    'Show the households where device fingerprints suggest an untapped VAS offer.',
+    'Explain whether this is a strong VAS-fit household based on device fingerprints and subscription gaps.',
   ],
   family: 'business',
   keywords: [
@@ -793,6 +1681,73 @@ const vasDeviceFingerprint: ScenarioDefinition = {
       ],
     },
   ],
+  variants: [
+    {
+      id: 'household-fit',
+      keywords: [
+        'strong vas-fit household',
+        'subscription gaps',
+        'is a strong vas-fit household',
+      ],
+      title: 'Household VAS Fit Assessment',
+      subtitle: 'Subscriber-Level Add-On Readiness',
+      description:
+        'Explained whether the selected household is a strong fit for a device-led VAS offer and why.',
+      loadingStages: [
+        'Inspecting household device fingerprints...',
+        'Checking current subscription gaps...',
+        'Comparing with converting lookalike households...',
+        'Preparing the VAS fit assessment...',
+      ],
+      confidence: 90,
+      evidenceDomains: [
+        'Device Inventory',
+        'Subscription Gaps',
+        'Household Profile',
+        'Peer Conversion',
+      ],
+      followUps: [
+        'Show the households where device fingerprints suggest an untapped VAS offer.',
+        'Identify the best VAS-fit households using device fingerprints and subscription gaps.',
+        'Recommend the best churn save offer and explain the expected impact.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Household Looks Like a Strong VAS Fit',
+          body: 'The household is a strong candidate for a parental-control or device-safety add-on because device fingerprints show both child-oriented endpoints and unmanaged gaming usage, while the current subscription bundle has no safety or parental-control coverage. Similar households convert well when the offer is framed around visibility and time controls instead of pure security language.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'VAS Fit Score', value: '84%', change: 'Strong fit', trend: 'up' },
+            { label: 'Detected Child Devices', value: '3', change: 'Kids tablet + wearable', trend: 'up' },
+            { label: 'Gaming Endpoints', value: '2', change: 'Console heavy usage', trend: 'up' },
+            { label: 'Subscription Gap', value: 'No safety add-on', change: 'Clear whitespace', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'VAS Fit Evidence',
+          columns: ['Signal', 'Observation', 'Impact', 'Interpretation'],
+          rows: [
+            ['Child devices', 'Kids tablet + smartwatch', 'High', 'Safety messaging resonates'],
+            ['Gaming activity', 'Console active 5 nights/week', 'Medium', 'Screen-time controls relevant'],
+            ['Current subscriptions', 'No parental controls', 'High', 'Clear upsell whitespace'],
+            ['Peer conversions', '19% on lookalikes', 'Medium', 'Offer likely to land'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Launch Household Offer', description: 'Trigger the safety-focused VAS offer for this household.', variant: 'primary' },
+            { label: 'Open Segment View', description: 'Return to the broader audience of VAS-fit households.', variant: 'outline' },
+            { label: 'Compare Offer Messaging', description: 'Review which creative converts best for similar homes.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 // ─── Scenario 7: Autonomous Wi-Fi Recovery ─────────────────────────────────
@@ -813,9 +1768,9 @@ const autonomousWifiRecovery: ScenarioDefinition = {
   confidence: 98,
   evidenceDomains: ['Wi-Fi Telemetry', 'Channel Analysis', 'Gateway Diagnostics', 'QoE Metrics'],
   followUps: [
-    'Show me the recovery timeline in detail',
-    'Has this subscriber had similar issues before?',
-    'View the gateway diagnostic log',
+    'Show the autonomous Wi-Fi recovery timeline and explain how AI verified the fix.',
+    'Run a post-fix validation and summarize the autonomous recovery result.',
+    'Show the cases AI fully resolved today and summarize what was fixed.',
   ],
   family: 'fleet',
   keywords: [
@@ -858,6 +1813,141 @@ const autonomousWifiRecovery: ScenarioDefinition = {
       ],
     },
   ],
+  variants: [
+    {
+      id: 'post-fix-validation',
+      keywords: [
+        'post-fix validation',
+        'current stability',
+        'still seeing interference',
+        'connectivity health',
+        'remaining support risk',
+        'latest recovery evidence',
+      ],
+      title: 'Post-Fix Validation Status',
+      subtitle: 'Stability Verification',
+      description:
+        'Re-checked the latest autonomous Wi-Fi recovery and summarized whether the case is still stable enough to stay closed.',
+      loadingStages: [
+        'Replaying post-fix gateway telemetry...',
+        'Checking interference and retry counters...',
+        'Verifying QoE stability after the fix...',
+        'Preparing the support-risk summary...',
+      ],
+      confidence: 96,
+      evidenceDomains: [
+        'Post-Fix Telemetry',
+        'Gateway Diagnostics',
+        'QoE Metrics',
+        'Interference History',
+      ],
+      followUps: [
+        'Show the autonomous Wi-Fi recovery timeline and explain how AI verified the fix.',
+        'Show the cases AI fully resolved today and summarize what was fixed.',
+        'Show the protected sessions AI handled today and explain the QoS actions.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'Recovery Still Holding',
+          body: 'The autonomous fix remains stable. Post-fix telemetry shows no new channel congestion events, retry counts stayed near baseline for the last verification window, and QoE metrics remain in the healthy range. The case can stay closed, with only low residual risk if a neighboring AP returns to the same channel later tonight.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Current Stability', value: 'Healthy', change: 'No reopen needed', trend: 'up' },
+            { label: 'Retry Rate', value: 'Baseline', change: 'Within normal band', trend: 'neutral' },
+            { label: 'Interference Risk', value: 'Low', change: 'Neighbor AP quiet', trend: 'down' },
+            { label: 'Residual Risk', value: 'Monitor overnight', change: 'Low priority', trend: 'neutral' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Post-Fix Validation Checks',
+          columns: ['Check', 'Latest Result', 'Baseline', 'Status'],
+          rows: [
+            ['Channel utilization', '34%', '32%', 'Healthy'],
+            ['Gateway retries / hour', '2', '2-3', 'Healthy'],
+            ['5GHz throughput', '482 Mbps', '470 Mbps', 'Healthy'],
+            ['Interference events', '0 in 6h', '0-1 expected', 'Healthy'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Keep Case Closed', description: 'Leave the autonomous recovery case closed with overnight monitoring.', variant: 'primary' },
+            { label: 'Open Recovery Timeline', description: 'Review the detailed autonomous fix timeline again.', variant: 'outline' },
+            { label: 'Watch Similar Cases', description: 'Check whether nearby homes show the same interference pattern.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'resolved-today',
+      keywords: [
+        'cases ai fully resolved today',
+        'fully resolved today',
+        'what was fixed',
+      ],
+      title: 'AI-Resolved Cases Today',
+      subtitle: 'Zero-Touch Support Summary',
+      description:
+        'Summarized the zero-touch support cases AI fully resolved today and what actions closed each one.',
+      loadingStages: [
+        'Scanning today’s autonomous closure queue...',
+        'Collecting the fix actions and verification outcomes...',
+        'Ranking the highest-value zero-touch saves...',
+        'Preparing the daily resolution summary...',
+      ],
+      confidence: 97,
+      evidenceDomains: [
+        'Case Queue',
+        'Autonomous Actions',
+        'QoE Recovery',
+        'Closure Audit',
+      ],
+      followUps: [
+        'Run a post-fix validation and summarize the autonomous recovery result.',
+        'Show the protected sessions AI handled today and explain the QoS actions.',
+        'Show the firmware rollback evidence that still needs human review.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'AI Closed Four Cases Without Human Help',
+          body: 'AI fully resolved four support issues today, most of them driven by local Wi-Fi interference or transient topology drift. Each case was automatically diagnosed, remediated, and held through a verification window before closure, saving the team roughly 7.5 human support hours.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Cases Closed Today', value: '4', change: 'Zero-touch', trend: 'up' },
+            { label: 'Time Saved', value: '7.5 hrs', change: 'Human effort avoided', trend: 'up' },
+            { label: 'Most Common Fix', value: 'Channel migration', change: '2 of 4 cases', trend: 'neutral' },
+            { label: 'Reopen Rate', value: '0%', change: 'So far today', trend: 'up' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Resolved Cases Today',
+          columns: ['Case', 'Issue', 'AI Action', 'Verification', 'Outcome'],
+          rows: [
+            ['TKT-4818', 'Wi-Fi interference', 'Auto channel migration', '4 min stable', 'Closed'],
+            ['TKT-4826', 'Roaming dead zone', 'Band steering update', 'QoE normal', 'Closed'],
+            ['TKT-4828', 'Guest SSID drift', 'Config correction', 'Clients rejoined', 'Closed'],
+            ['TKT-4831', 'High retry bursts', 'Radio power adjustment', 'Retries normalized', 'Closed'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Review Today’s Closures', description: 'Open the zero-touch cases AI fully resolved today.', variant: 'primary' },
+            { label: 'Run Spot Validation', description: 'Re-check the healthiest closure for safety.', variant: 'outline' },
+            { label: 'Compare Protected Sessions', description: 'Contrast zero-touch closures with cases that needed QoS protection.', variant: 'outline' },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 // ─── Scenario 8: Critical Session Protection ──────────────────────────────
@@ -877,9 +1967,9 @@ const criticalSessionProtection: ScenarioDefinition = {
   confidence: 97,
   evidenceDomains: ['Session Monitor', 'QoS Engine', 'Interference Detection', 'Traffic Classifier'],
   followUps: [
-    'Show the QoS policy applied',
-    'View session quality metrics during protection',
-    'How many sessions were protected this week?',
+    'Show the protected session and explain which QoS actions kept it stable.',
+    'Show how AI protected active sessions during the last incident window.',
+    'Show the protected sessions AI handled today and explain the QoS actions.',
   ],
   family: 'fleet',
   keywords: [
@@ -918,6 +2008,73 @@ const criticalSessionProtection: ScenarioDefinition = {
       items: [
         { label: 'View QoS Policy Details', description: 'See the exact traffic prioritization rules applied during protection.', variant: 'outline' },
         { label: 'Protection History', description: 'View all session protection events for this subscriber.', variant: 'outline' },
+      ],
+    },
+  ],
+  variants: [
+    {
+      id: 'sessions-today',
+      keywords: [
+        'protected sessions ai handled today',
+        'sessions were protected this week',
+        'protected sessions today',
+      ],
+      title: 'Protected Sessions Today',
+      subtitle: 'Daily QoS Safeguard Summary',
+      description:
+        'Summarized the sessions AI protected today and the QoS actions that kept them stable.',
+      loadingStages: [
+        'Scanning protected sessions from today’s congestion windows...',
+        'Collecting the QoS actions applied to each session...',
+        'Verifying user impact stayed below threshold...',
+        'Preparing the daily protection summary...',
+      ],
+      confidence: 95,
+      evidenceDomains: [
+        'Session Monitor',
+        'QoS Engine',
+        'Congestion Signals',
+        'Outcome Verification',
+      ],
+      followUps: [
+        'Show how AI protected active sessions during the last incident window.',
+        'Run a post-fix validation and summarize the autonomous recovery result.',
+        'Show the cases AI fully resolved today and summarize what was fixed.',
+      ],
+      blocks: [
+        {
+          type: 'summary',
+          title: 'AI Protected Nine High-Value Sessions Today',
+          body: 'AI actively protected nine sessions during today’s congestion windows, mostly executive video calls and remote support sessions. QoS reservations and traffic prioritization kept mean session quality above the service threshold in every case, with no user-visible disconnects.',
+        },
+        {
+          type: 'stats',
+          items: [
+            { label: 'Protected Sessions', value: '9', change: 'Today', trend: 'up' },
+            { label: 'Most Used Action', value: 'QoS prioritization', change: '7 sessions', trend: 'neutral' },
+            { label: 'Reserved Bandwidth', value: '1.8 Gbps', change: 'Across all cases', trend: 'up' },
+            { label: 'Session Failures', value: '0', change: 'No visible drops', trend: 'up' },
+          ],
+        },
+        {
+          type: 'table',
+          title: 'Protected Sessions Summary',
+          columns: ['Session', 'Risk', 'QoS Action', 'Duration', 'Outcome'],
+          rows: [
+            ['Video call: John Smith', 'Neighbor interference', 'Priority queue + reservation', '47 min', 'Protected'],
+            ['Remote support: Acme Ops', 'Peak congestion', 'Traffic shaping', '39 min', 'Protected'],
+            ['Executive conference', 'Packet loss spike', 'Bandwidth reservation', '52 min', 'Protected'],
+            ['Sales demo', 'RF interference', 'Priority queue', '28 min', 'Protected'],
+          ],
+        },
+        {
+          type: 'actions',
+          items: [
+            { label: 'Review Protected Sessions', description: 'Open the sessions AI handled today and the QoS actions used.', variant: 'primary' },
+            { label: 'Inspect Last Incident Window', description: 'Look at the most recent congestion window in detail.', variant: 'outline' },
+            { label: 'Compare Zero-Touch Closures', description: 'Contrast session protection with fully autonomous case closures.', variant: 'outline' },
+          ],
+        },
       ],
     },
   ],

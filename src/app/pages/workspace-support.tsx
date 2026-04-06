@@ -13,6 +13,10 @@ import { resolveScenarioForWorkspace } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
 import { WorkspaceSession } from '../components/generative/workspace-session';
 import {
+  buildFallbackClarificationMessage,
+  matchPromptCandidate,
+} from '../lib/fallback-query-routing';
+import {
   buildProcessRailSnapshot,
   DEMO_PROCESS_TIMING,
   getScenarioProcessDuration,
@@ -784,6 +788,55 @@ export function SupportWorkspace() {
     scenarioTimerRef.current = [];
   };
 
+  const showScenarioWorkspace = (query: string, scenario: ScenarioDefinition) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'generative-workspace',
+        scenario,
+      },
+    ]);
+    setActiveProcess({
+      scenario,
+      query,
+      phase: 'intake',
+    });
+    setIsTyping(true);
+    const totalDuration = getScenarioProcessDuration(
+      scenario.loadingStages.length,
+    );
+    const readyAt = Math.max(
+      DEMO_PROCESS_TIMING.stageMs * 3,
+      totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
+    );
+    scenarioTimerRef.current = [
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'evidence' }
+            : current,
+        );
+      }, DEMO_PROCESS_TIMING.stageMs),
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'synthesis' }
+            : current,
+        );
+      }, DEMO_PROCESS_TIMING.stageMs * 2),
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'ready' }
+            : current,
+        );
+      }, readyAt),
+      window.setTimeout(() => {
+        setIsTyping(false);
+      }, totalDuration),
+    ];
+  };
+
   // Reset active command index when input changes
   useEffect(() => {
     setActiveCommandIndex(0);
@@ -1087,54 +1140,19 @@ export function SupportWorkspace() {
       'support',
       preferredScenarioId,
     );
+    const matchedAction = matchedScenario
+      ? null
+      : matchPromptCandidate(query, currentScopeActions);
+    const fallbackScenario = matchedAction?.scenarioId
+      ? resolveScenarioForWorkspace(
+          matchedAction.prompt,
+          'support',
+          matchedAction.scenarioId,
+        )
+      : null;
 
     if (matchedScenario) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: 'generative-workspace',
-          scenario: matchedScenario,
-        },
-      ]);
-      setActiveProcess({
-        scenario: matchedScenario,
-        query,
-        phase: 'intake',
-      });
-      setIsTyping(true);
-      const totalDuration = getScenarioProcessDuration(
-        matchedScenario.loadingStages.length,
-      );
-      const readyAt = Math.max(
-        DEMO_PROCESS_TIMING.stageMs * 3,
-        totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
-      );
-      scenarioTimerRef.current = [
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'evidence' }
-              : current,
-          );
-        }, DEMO_PROCESS_TIMING.stageMs),
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'synthesis' }
-              : current,
-          );
-        }, DEMO_PROCESS_TIMING.stageMs * 2),
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'ready' }
-              : current,
-          );
-        }, readyAt),
-        window.setTimeout(() => {
-          setIsTyping(false);
-        }, totalDuration),
-      ];
+      showScenarioWorkspace(query, matchedScenario);
       return;
     }
 
@@ -1225,12 +1243,17 @@ export function SupportWorkspace() {
             subscribers: MOCK_SUBSCRIBERS,
           },
         ]);
+      } else if (fallbackScenario) {
+        showScenarioWorkspace(query, fallbackScenario);
       } else {
         setMessages((prev) => [
           ...prev,
           {
             type: 'ai-text',
-            message: `I understand you're asking about "${query}". In Support mode, I can help you with tickets, subscribers, and home diagnostics. Could you provide a ticket ID or subscriber ID?`,
+            message: buildFallbackClarificationMessage(
+              'Support',
+              currentScopeActions.map((action) => action.prompt),
+            ),
             timestamp: getTimestamp(),
           },
         ]);

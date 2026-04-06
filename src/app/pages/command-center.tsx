@@ -5,6 +5,10 @@ import { AppLayout } from '../components/app-layout';
 import { ContextPanel } from '../components/context-panel';
 import { ScopeSelection } from '../components/scope-selector';
 import {
+  buildFallbackClarificationMessage,
+  matchPromptCandidate,
+} from '../lib/fallback-query-routing';
+import {
   REGIONS,
   REGION_LABELS,
   ORGANIZATION_LABELS,
@@ -1550,16 +1554,7 @@ export function CommandCenter() {
     }
   };
 
-  const executeQuickAction = (action: ScopeQuickAction) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        type: 'user',
-        message: action.prompt,
-        timestamp: getTimestamp(),
-      },
-    ]);
-
+  const appendQuickActionResult = (action: ScopeQuickAction) => {
     setIsTyping(true);
 
     setTimeout(() => {
@@ -1607,6 +1602,19 @@ export function CommandCenter() {
 
       setMessages((prev) => [...prev, ...nextMessages]);
     }, 700);
+  };
+
+  const executeQuickAction = (action: ScopeQuickAction) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'user',
+        message: action.prompt,
+        timestamp: getTimestamp(),
+      },
+    ]);
+
+    appendQuickActionResult(action);
   };
 
   const handleScopeChange = (scope: ScopeSelection) => {
@@ -1657,14 +1665,15 @@ export function CommandCenter() {
       return;
     }
 
-    const userInput = input.toLowerCase();
+    const query = input.trim();
+    const userInput = query.toLowerCase();
 
     // Add user message
     setMessages((prev) => [
       ...prev,
       {
         type: 'user',
-        message: input,
+        message: query,
         timestamp: new Date().toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
@@ -1673,12 +1682,12 @@ export function CommandCenter() {
     ]);
 
     setInput('');
-    setIsTyping(true);
 
     // Check if the query matches a generative scenario
-    const matchedScenario = resolveScenario(input);
+    const matchedScenario = resolveScenario(query);
 
     if (matchedScenario) {
+      setIsTyping(true);
       setActiveScenario(matchedScenario);
       // Add a brief AI acknowledgment, then the generative workspace will handle the rest
       setTimeout(() => {
@@ -1694,105 +1703,28 @@ export function CommandCenter() {
       return;
     }
 
-    // Simulate AI response with different content based on input
+    const matchedQuickAction = matchPromptCandidate(query, currentScopeActions);
+
+    if (matchedQuickAction) {
+      appendQuickActionResult(matchedQuickAction);
+      return;
+    }
+
+    setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-
-      if (userInput.includes('device') || userInput.includes('gateway') || userInput.includes('list')) {
-        // Show device table
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: 'ai-text',
-            message: `Here is a summary of devices in ${getScopeDisplayLabel(currentScope)}.`,
-            timestamp: getTimestamp(),
-          },
-          {
-            type: 'device-table',
-          },
-        ]);
-      } else if (userInput.includes('topology') || userInput.includes('subscriber') || userInput.includes('john')) {
-        // Show topology
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: 'ai-text',
-            message: `Here is the network topology for ${getScopeDisplayLabel(currentScope)}.`,
-            timestamp: getTimestamp(),
-          },
-          {
-            type: 'topology',
-          },
-        ]);
-      } else if (userInput.includes('chart') || userInput.includes('history') || userInput.includes('bandwidth')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here is the recent bandwidth usage for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'bandwidth-chart' },
-        ]);
-      } else if (userInput.includes('speed test') || userInput.includes('speed')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Running a speed test for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'speed-test' },
-        ]);
-      } else if (userInput.includes('outage') || userInput.includes('down')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here are the active outages for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'outage-map' },
-        ]);
-      } else if (userInput.includes('plan')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here is the current service plan for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'service-plan' },
-        ]);
-      } else if (userInput.includes('work order') || userInput.includes('ticket')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here are the latest work orders for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'work-order' },
-        ]);
-      } else if (userInput.includes('sla') || userInput.includes('uptime')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here is the current SLA compliance status for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'sla-status' },
-        ]);
-      } else if (userInput.includes('provision') || userInput.includes('new user')) {
-        setMessages((prev) => [...prev,
-          { type: 'ai-text', message: `Here is the provisioning status for ${getScopeDisplayLabel(currentScope)}.`, timestamp: getTimestamp() },
-          { type: 'provisioning' },
-        ]);
-      } else {
-        // Default response
-        const nextMessages = [
-          {
-            type: 'ai-text',
-            message: `I analyzed ${getScopeDisplayLabel(currentScope)}. Here is what I found.`,
-            timestamp: getTimestamp(),
-          },
-          {
-            type: 'metric',
-          },
-          {
-            type: 'alerts',
-          },
-          {
-            type: 'subscriber',
-          },
-        ];
-
-        if (currentScope.level === 'subscriber') {
-          nextMessages.push({
-            type: 'device-table',
-          });
-        }
-
-        if (currentScope.level !== 'subscriber') {
-          nextMessages.push({
-            type: 'action',
-          });
-        }
-
-        setMessages((prev) => [...prev, ...nextMessages]);
-      }
-    }, 1500);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: 'ai-text',
+          message: buildFallbackClarificationMessage(
+            'operations',
+            currentScopeActions.map((action) => action.prompt),
+          ),
+          timestamp: getTimestamp(),
+        },
+      ]);
+    }, 700);
   };
 
   const handleConfirmAction = () => {

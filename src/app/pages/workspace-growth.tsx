@@ -12,6 +12,10 @@ import { resolveScenarioForWorkspace } from '../lib/scenario-resolver';
 import { ScenarioDefinition } from '../lib/scenario-definitions';
 import { WorkspaceSession } from '../components/generative/workspace-session';
 import {
+  buildFallbackClarificationMessage,
+  matchPromptCandidate,
+} from '../lib/fallback-query-routing';
+import {
   buildProcessRailSnapshot,
   DEMO_PROCESS_TIMING,
   getScenarioProcessDuration,
@@ -430,6 +434,55 @@ export function GrowthWorkspace() {
     scenarioTimerRef.current = [];
   };
 
+  const showScenarioWorkspace = (query: string, scenario: ScenarioDefinition) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'generative-workspace',
+        scenario,
+      },
+    ]);
+    setActiveProcess({
+      scenario,
+      query,
+      phase: 'intake',
+    });
+    setIsTyping(true);
+    const totalDuration = getScenarioProcessDuration(
+      scenario.loadingStages.length,
+    );
+    const readyAt = Math.max(
+      DEMO_PROCESS_TIMING.stageMs * 3,
+      totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
+    );
+    scenarioTimerRef.current = [
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'evidence' }
+            : current,
+        );
+      }, DEMO_PROCESS_TIMING.stageMs),
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'synthesis' }
+            : current,
+        );
+      }, DEMO_PROCESS_TIMING.stageMs * 2),
+      window.setTimeout(() => {
+        setActiveProcess((current) =>
+          current?.scenario.id === scenario.id && current.query === query
+            ? { ...current, phase: 'ready' }
+            : current,
+        );
+      }, readyAt),
+      window.setTimeout(() => {
+        setIsTyping(false);
+      }, totalDuration),
+    ];
+  };
+
   // Reset active command index when input changes
   useEffect(() => {
     setActiveCommandIndex(0);
@@ -663,6 +716,17 @@ export function GrowthWorkspace() {
       'growth',
       preferredScenarioId,
     );
+    const matchedAction = matchedScenario
+      ? null
+      : matchPromptCandidate(query, currentScopeActions);
+    const fallbackScenario = matchedAction?.scenarioId
+      ? resolveScenarioForWorkspace(
+          matchedAction.prompt,
+          'growth',
+          matchedAction.scenarioId,
+        )
+      : null;
+    const resolvedScenario = matchedScenario ?? fallbackScenario;
 
     setMessages((prev) => [
       ...prev,
@@ -673,53 +737,8 @@ export function GrowthWorkspace() {
       },
     ]);
 
-    if (matchedScenario) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: 'generative-workspace',
-          scenario: matchedScenario,
-        },
-      ]);
-      setActiveProcess({
-        scenario: matchedScenario,
-        query,
-        phase: 'intake',
-      });
-      setIsTyping(true);
-      const totalDuration = getScenarioProcessDuration(
-        matchedScenario.loadingStages.length,
-      );
-      const readyAt = Math.max(
-        DEMO_PROCESS_TIMING.stageMs * 3,
-        totalDuration - DEMO_PROCESS_TIMING.finalPauseMs,
-      );
-      scenarioTimerRef.current = [
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'evidence' }
-              : current,
-          );
-        }, DEMO_PROCESS_TIMING.stageMs),
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'synthesis' }
-              : current,
-          );
-        }, DEMO_PROCESS_TIMING.stageMs * 2),
-        window.setTimeout(() => {
-          setActiveProcess((current) =>
-            current?.scenario.id === matchedScenario.id && current.query === query
-              ? { ...current, phase: 'ready' }
-              : current,
-          );
-        }, readyAt),
-        window.setTimeout(() => {
-          setIsTyping(false);
-        }, totalDuration),
-      ];
+    if (resolvedScenario) {
+      showScenarioWorkspace(query, resolvedScenario);
     } else {
       setActiveProcess(null);
       setIsTyping(true);
@@ -729,14 +748,11 @@ export function GrowthWorkspace() {
           ...prev,
           {
             type: 'ai-text',
-            message: `I've analyzed the growth data for "${query}". Here's what I found.`,
+            message: buildFallbackClarificationMessage(
+              'Growth',
+              currentScopeActions.map((action) => action.prompt),
+            ),
             timestamp: getTimestamp(),
-          },
-          {
-            type: 'metric',
-          },
-          {
-            type: 'alerts',
           },
         ]);
       }, 1500);
